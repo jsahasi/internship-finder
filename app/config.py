@@ -166,11 +166,17 @@ class AppConfig(BaseModel):
 
 class EnvSettings(BaseSettings):
     """Environment variable settings."""
+    # LLM API Keys
+    anthropic_api_key: Optional[str] = Field(default=None, alias="ANTHROPIC_API_KEY")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
+
+    # Search API Keys (optional, Claude/OpenAI search is default)
     google_cse_api_key: Optional[str] = Field(default=None, alias="GOOGLE_CSE_API_KEY")
     google_cse_cx: Optional[str] = Field(default=None, alias="GOOGLE_CSE_CX")
     bing_api_key: Optional[str] = Field(default=None, alias="BING_API_KEY")
     serpapi_key: Optional[str] = Field(default=None, alias="SERPAPI_KEY")
-    anthropic_api_key: Optional[str] = Field(default=None, alias="ANTHROPIC_API_KEY")
+
+    # Email settings
     sendgrid_api_key: Optional[str] = Field(default=None, alias="SENDGRID_API_KEY")
     smtp_host: Optional[str] = Field(default=None, alias="SMTP_HOST")
     smtp_port: int = Field(default=587, alias="SMTP_PORT")

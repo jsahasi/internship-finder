@@ -1,114 +1,222 @@
 # Underclass Internship Scanner
 
-A production-grade Python application that finds internship opportunities specifically targeted at underclassmen (freshmen and sophomores) in Software Engineering, Product Management, Consulting, and Investment Banking.
+A production-grade Python application that finds internship opportunities specifically targeted at underclassmen (freshmen and sophomores) and generates tailored application materials.
 
 ## Features
 
-- **Multi-source discovery**: Fetches from Greenhouse, Lever, Ashby ATS platforms + search APIs
-- **Smart filtering**: Excludes postings for juniors/seniors (Class of 2027/2028)
-- **Underclass targeting**: Only includes postings with explicit freshman/sophomore signals
-- **LLM classification**: Uses Claude for role categorization and summary generation
-- **Deduplication**: SQLite-based state to avoid emailing duplicate postings
-- **Email digest**: HTML-formatted reports via SendGrid or SMTP
+- **Multi-LLM Search**: Uses Claude and/or OpenAI to intelligently search for internships
+- **Smart Filtering**: Excludes postings for juniors/seniors based on your graduation year
+- **Personalized Profile**: Configure your year, target roles, skills, and preferences
+- **Auto-Generated Documents**: Creates tailored resumes and cover letters for each match
+- **Multi-Source Discovery**: Fetches from Greenhouse, Lever, Ashby ATS platforms
+- **Email Digest**: Sends results with PDF attachments via SendGrid or SMTP
+- **Deduplication**: SQLite-based state to avoid duplicate notifications
 
 ## Quick Start
 
-### 1. Clone and Install
+### 1. Install
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/jsahasi/internship-finder.git
 cd internship-finder
 pip install -r requirements.txt
 ```
 
-### 2. Configure
+### 2. Configure Your Profile
+
+Edit `config/seeking.txt` with your preferences:
+
+```yaml
+# Your current year
+year: freshman
+
+# Expected graduation
+graduation_year: 2029
+
+# Target roles
+roles:
+- software engineering
+- product management
+- consulting
+
+# Your skills (for document generation)
+skills:
+- Python
+- JavaScript
+- React
+
+# About yourself (for cover letters)
+about_me: |
+  I'm a passionate CS student eager to apply my skills...
+```
+
+### 3. Add Your Resume (Optional)
+
+Place your resume PDF in the `config/` folder with "resume" in the filename:
+- `config/my_resume.pdf`
+- `config/John_Doe_Resume.pdf`
+
+The scanner will extract text and use it to generate tailored application materials.
+
+### 4. Set Up API Keys
+
+Create a `.env` file from the example:
 
 ```bash
-# Copy example configs
-cp config.example.yaml config.yaml
 cp .env.example .env
-
-# Edit config.yaml with your target companies and recipients
-# Edit .env with your API keys
 ```
 
-### 3. Run
+Add your API keys:
 
 ```bash
-# Dry run (print results, no email)
-python -m app.main --config config.yaml --dry_run
+# Required: At least one LLM key
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...  # Optional, for broader search
 
-# Full run with email
-python -m app.main --config config.yaml
-
-# Force reprocess (ignore deduplication)
-python -m app.main --config config.yaml --force
+# Email (choose one)
+SENDGRID_API_KEY=SG...
+# OR
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=you@gmail.com
+SMTP_PASSWORD=app_password
 ```
 
-## Configuration
+### 5. Run
 
-### config.yaml
+```bash
+# Dry run (see results without sending email)
+python -m app.main --dry_run
+
+# Full run with email and document generation
+python -m app.main
+
+# Skip document generation (faster)
+python -m app.main --no_documents
+```
+
+## Configuration Files
+
+### `config/seeking.txt` - Your Job Search Profile
+
+```yaml
+year: freshman                    # freshman, sophomore, junior, senior
+graduation_year: 2029             # Your expected graduation year
+roles:                            # Target role types
+- software engineering
+- product management
+industries:                       # Preferred industries
+- tech
+- fintech
+locations:                        # Location preferences
+- San Francisco, CA
+- Remote
+skills:                           # Skills to highlight
+- Python
+- React
+additional_criteria: |            # Plain English requirements
+  Looking for strong mentorship programs.
+  Interested in AI/ML projects.
+about_me: |                       # Used in cover letters
+  I'm a passionate student...
+```
+
+### `config.yaml` - Application Settings
 
 ```yaml
 recipients:
   - your.email@example.com
 
 search:
-  provider: google_cse  # google_cse, bing, or serpapi
+  provider: claude               # claude, google_cse, bing, serpapi
   recency_days: 7
 
 targets:
   ats_companies:
-    greenhouse:
-      - google
-      - stripe
-      - airbnb
-    lever:
-      - netflix
-    ashby:
-      - openai
+    greenhouse: [google, stripe, airbnb]
+    lever: [netflix]
+    ashby: [openai]
+
+# Custom function families (add your own!)
+functions:
+  families:
+    DataScience:
+      display_name: "Data Science"
+      title_patterns: ['\bdata\s+scien']
+      boost_keywords: [python, tensorflow]
+      target: true
 ```
 
-### Environment Variables (.env)
+### `.env` - API Keys
 
 ```bash
-# Search API (Google CSE recommended - 100 free queries/day)
-GOOGLE_CSE_API_KEY=your_key
-GOOGLE_CSE_CX=your_cx_id
-
-# LLM (for classification)
-ANTHROPIC_API_KEY=your_key
-
-# Email (SendGrid or SMTP)
-SENDGRID_API_KEY=your_key
-# OR
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=your@email.com
-SMTP_PASSWORD=app_password
+ANTHROPIC_API_KEY=sk-ant-...     # Required for Claude
+OPENAI_API_KEY=sk-...            # Optional, enables dual-LLM search
+SENDGRID_API_KEY=SG...           # Or use SMTP_* variables
 ```
 
-## Filtering Rules
+## How It Works
 
-### Hard Exclusions
-- Contains "2027" or "2028" (current junior/senior graduation years)
-- Contains: junior, senior, penultimate, rising senior, final year, upperclassmen
-- Post date > 7 days ago or missing
+1. **Profile Loading**: Reads your preferences from `config/seeking.txt`
+2. **Resume Extraction**: Extracts text from your PDF resume
+3. **Smart Search**: Uses Claude (and OpenAI if available) to find relevant postings
+4. **Filtering**: Applies rules based on your year and preferences
+5. **Document Generation**: Creates tailored resume and cover letter for each match
+6. **Email Delivery**: Sends digest with PDF attachments
 
-### Required for Inclusion
-- Contains underclass signal: freshman, sophomore, first-year, second-year, underclassmen, discovery, pre-internship, early insight
-- Role is: Software Engineering, Product Management, Consulting, or Investment Banking
+## Multi-LLM Search
 
-## Target Companies
+When both `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are set:
+- Both Claude and GPT-4 search for internships
+- Results are deduplicated by URL
+- Broader coverage of job postings
 
-The scanner fetches from ATS platforms using their public APIs:
+## CLI Options
 
-| ATS | API Format | Example |
-|-----|------------|---------|
-| Greenhouse | `boards-api.greenhouse.io/v1/boards/{company}/jobs` | google, stripe |
-| Lever | `api.lever.co/v0/postings/{company}?mode=json` | netflix |
-| Ashby | `jobs.ashbyhq.com/{company}` (HTML) | openai |
+| Flag | Description |
+|------|-------------|
+| `--config PATH` | Path to config YAML (default: config.yaml) |
+| `--profile_dir PATH` | Directory with seeking.txt and resume (default: config) |
+| `--dry_run` | Print results without sending email |
+| `--no_documents` | Skip generating tailored resumes/cover letters |
+| `--force` | Ignore deduplication, reprocess all |
+| `--max_results N` | Limit postings to process |
+| `--log_level LEVEL` | DEBUG, INFO, WARNING, ERROR |
 
-Find company slugs by visiting their careers pages.
+## Email Output
+
+The email digest includes:
+- **HTML Report**: Formatted table of matching internships
+- **CSV Attachment**: All postings in spreadsheet format
+- **PDF Attachments**: Tailored resume and cover letter for each match
+
+## Project Structure
+
+```
+internship-finder/
+├── config/                      # User profile directory
+│   ├── seeking.txt              # Your job search preferences
+│   └── *resume*.pdf             # Your resume (optional)
+├── app/
+│   ├── main.py                  # CLI entry point
+│   ├── config.py                # Configuration loading
+│   ├── profile/                 # Profile & document generation
+│   │   ├── seeker.py            # Parse seeking.txt
+│   │   └── documents.py         # Resume/cover letter generation
+│   ├── sources/                 # Job fetchers
+│   │   ├── claude_search.py     # Claude-powered search
+│   │   ├── openai_search.py     # OpenAI-powered search
+│   │   ├── greenhouse.py        # Greenhouse ATS
+│   │   ├── lever.py             # Lever ATS
+│   │   └── ashby.py             # Ashby ATS
+│   ├── filtering/               # Filtering engine
+│   ├── llm/                     # LLM classification
+│   ├── storage/                 # SQLite deduplication
+│   └── reporting/               # Email & rendering
+├── config.yaml                  # Application config
+├── config.example.yaml          # Example config
+├── .env                         # API keys (create from .env.example)
+└── requirements.txt
+```
 
 ## Docker
 
@@ -116,69 +224,15 @@ Find company slugs by visiting their careers pages.
 # Build and run
 docker compose up --build
 
-# Run tests
-docker compose --profile test up test
+# Run with custom profile directory
+docker compose run -v ./my_profile:/app/config scanner
 ```
 
 ## Testing
 
 ```bash
-# Run all tests
 pytest tests/ -v
-
-# Run specific test file
-pytest tests/test_rules.py -v
 ```
-
-## Project Structure
-
-```
-app/
-├── main.py              # CLI entry point
-├── config.py            # Configuration loading
-├── logging_config.py    # Logging setup
-├── sources/             # Data fetchers
-│   ├── greenhouse.py    # Greenhouse ATS adapter
-│   ├── lever.py         # Lever ATS adapter
-│   ├── ashby.py         # Ashby ATS adapter
-│   └── search_provider.py # Search API integrations
-├── extract/             # Data normalization
-│   ├── normalize.py     # Posting data model
-│   ├── dates.py         # Date parsing
-│   └── canonical.py     # URL canonicalization
-├── filtering/           # Filtering engine
-│   ├── rules.py         # Exclusion/inclusion rules
-│   └── taxonomy.py      # Role classification
-├── llm/                 # Claude integration
-│   ├── claude_client.py # API client
-│   ├── prompts.py       # Prompt templates
-│   └── schema.py        # Response validation
-├── storage/             # Persistence
-│   └── state.py         # SQLite deduplication
-└── reporting/           # Output generation
-    ├── render.py        # HTML/text rendering
-    └── emailer.py       # Email delivery
-```
-
-## CLI Options
-
-| Flag | Description |
-|------|-------------|
-| `--config PATH` | Path to config YAML (default: config.yaml) |
-| `--dry_run` | Print results without sending email |
-| `--force` | Ignore deduplication, process all |
-| `--max_results N` | Limit postings to process |
-| `--log_level LEVEL` | DEBUG, INFO, WARNING, ERROR |
-
-## Output
-
-### Included Postings
-```
-Company | Role | Function | Location | Posted | Evidence | Why Fits | URL
-```
-
-### Near Misses
-Top 10 excluded postings with reasons (e.g., "Contains 2027", "No underclass signal")
 
 ## License
 

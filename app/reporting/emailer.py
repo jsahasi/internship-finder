@@ -175,10 +175,20 @@ class SendGridProvider(EmailProvider):
         if attachments:
             for filename, content in attachments:
                 encoded = base64.b64encode(content).decode()
+                # Determine file type from extension
+                if filename.endswith('.pdf'):
+                    file_type = 'application/pdf'
+                elif filename.endswith('.csv'):
+                    file_type = 'text/csv'
+                elif filename.endswith('.txt'):
+                    file_type = 'text/plain'
+                else:
+                    file_type = 'application/octet-stream'
+
                 attachment = Attachment(
                     FileContent(encoded),
                     FileName(filename),
-                    FileType('application/csv'),
+                    FileType(file_type),
                     Disposition('attachment')
                 )
                 message.add_attachment(attachment)

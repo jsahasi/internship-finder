@@ -1,0 +1,58 @@
+# Job Search Profile
+# Fill out this file to customize your internship search
+
+## Current Year in College
+# Options: freshman, sophomore, junior, senior
+# This helps filter for programs matching your class year
+year: freshman
+
+## Target Graduation Year
+# Your expected graduation year (e.g., 2028, 2029)
+graduation_year: 2029
+
+## Target Roles
+# List the types of roles you're interested in (one per line)
+# Examples: software engineering, product management, data science, consulting
+roles:
+- software engineering
+- product management
+- consulting
+- investment banking
+
+## Preferred Industries
+# List industries you're interested in (one per line)
+# Examples: tech, finance, consulting, healthcare, e-commerce
+industries:
+- tech
+- fintech
+- finance
+
+## Location Preferences
+# List preferred locations or "remote" (one per line)
+locations:
+- San Francisco, CA
+- New York, NY
+- Remote
+
+## Skills to Highlight
+# Key skills from your background to emphasize in applications
+skills:
+- Python
+- JavaScript
+- React
+- SQL
+- Data Analysis
+- consulting clubs and projects
+
+## Additional Criteria
+# Any other requirements or preferences in plain English
+additional_criteria: |
+  Looking for companies with strong mentorship programs.
+  Prefer roles with exposure to AI and full-stack development.
+  Open to startups as well as larger tech companies.
+
+## About Me (for cover letters)
+# A brief description of yourself and what you're looking for
+about_me: |
+  I'm a passionate computer science and business/ economics student eager to apply my skills
+  in a real-world environment. 
