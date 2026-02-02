@@ -7,8 +7,8 @@ recipients:
 
 # Search provider settings
 search:
-  # Provider: google_cse (recommended, free tier), bing, or serpapi
-  provider: google_cse
+  # Provider: claude (default, uses LLM with web search), google_cse, bing, or serpapi
+  provider: claude
   # Only include postings from the last N days
   recency_days: 7
   # Max results per search query
@@ -111,6 +111,78 @@ email:
   smtp_host: smtp.gmail.com
   smtp_port: 587
   # smtp_user and smtp_password come from .env
+
+# Function families configuration (customize or add new ones)
+# Each family has: display_name, title_patterns (regex), boost_keywords, target (true/false)
+functions:
+  families:
+    SWE:
+      display_name: "Software Engineering"
+      title_patterns:
+        - '\b(?:software|swe|developer|engineer(?:ing)?|programming|coding)\b'
+        - '\b(?:backend|frontend|full[- ]?stack|devops|sre|platform)\b'
+        - '\b(?:data\s+engineer|ml\s+engineer|machine\s+learning)\b'
+      boost_keywords:
+        - python
+        - java
+        - javascript
+        - react
+        - aws
+      target: true
+
+    PM:
+      display_name: "Product Management"
+      title_patterns:
+        - '\b(?:product\s+manag|pm\b|product\s+lead)'
+        - '\b(?:program\s+manag|technical\s+program)\b'
+        - '\bapm\b'
+      boost_keywords:
+        - roadmap
+        - stakeholder
+        - user research
+        - metrics
+      target: true
+
+    Consulting:
+      display_name: "Consulting"
+      title_patterns:
+        - '\b(?:consult(?:ant|ing)?)\b'
+        - '\b(?:strategy|strateg(?:ic|y)\s+(?:analyst|associate))\b'
+        - '\b(?:management\s+consult|business\s+analyst)\b'
+      boost_keywords:
+        - client
+        - engagement
+        - mckinsey
+        - bcg
+        - bain
+      target: true
+
+    IB:
+      display_name: "Investment Banking"
+      title_patterns:
+        - '\b(?:investment\s+bank(?:ing)?|ib\s+analyst)\b'
+        - '\b(?:m&a|mergers?\s+(?:and|&)\s+acquisitions?)\b'
+        - '\b(?:capital\s+markets|equity\s+research)\b'
+        - '\bsummer\s+analyst\b'
+      boost_keywords:
+        - valuation
+        - dcf
+        - pitch book
+        - goldman
+        - jpmorgan
+      target: true
+
+    # Example: Add a new function family (uncomment to enable)
+    # DataScience:
+    #   display_name: "Data Science"
+    #   title_patterns:
+    #     - '\b(?:data\s+scien|analytics|ml|machine\s+learning)\b'
+    #   boost_keywords:
+    #     - python
+    #     - sql
+    #     - tensorflow
+    #     - pandas
+    #   target: true
 
 # Database path for deduplication state
 database_path: internships.db

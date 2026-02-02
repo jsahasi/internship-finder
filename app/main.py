@@ -20,6 +20,7 @@ from app.sources.ashby import AshbyAdapter
 from app.sources.generic_html import GenericHTMLParser
 from app.sources.greenhouse import GreenhouseAdapter
 from app.sources.lever import LeverAdapter
+from app.sources.claude_search import ClaudeSearchProvider
 from app.sources.search_provider import (
     create_search_provider,
     build_internship_query
@@ -140,7 +141,35 @@ def fetch_from_search(
     postings = []
     provider_type = config.search.provider
 
-    # Get API credentials
+    # Claude search (default - uses LLM with web search)
+    if provider_type == 'claude':
+        if not env.anthropic_api_key:
+            logger.warning("Anthropic API key not configured, skipping Claude search")
+            return []
+
+        logger.info("Using Claude-powered search")
+        claude_search = ClaudeSearchProvider(
+            api_key=env.anthropic_api_key,
+            max_results=config.search.max_results_per_query
+        )
+
+        # Get target function families
+        target_functions = [
+            key for key, cfg in config.functions.families.items()
+            if cfg.target
+        ]
+
+        # Search using Claude
+        postings = claude_search.search(
+            target_functions=target_functions,
+            underclass_terms=config.keywords.underclass,
+            recency_days=config.search.recency_days
+        )
+
+        logger.info(f"Claude search complete: {len(postings)} postings, {claude_search.get_usage_stats()}")
+        return postings
+
+    # Traditional search API providers
     api_key = None
     cx = None
 
@@ -257,7 +286,8 @@ def run_pipeline(
     posting_filter = PostingFilter(
         config.keywords,
         config.exclusions,
-        config.search.recency_days
+        config.search.recency_days,
+        config.functions
     )
     renderer = ReportRenderer()
 

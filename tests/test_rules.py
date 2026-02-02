@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from app.config import ExclusionsConfig, KeywordsConfig
-from app.extract.normalize import FunctionFamily, Posting
+from app.extract.normalize import OTHER_FUNCTION, Posting
 from app.filtering.rules import PostingFilter, quick_exclude_check
 
 
@@ -42,7 +42,7 @@ def make_posting(
     company: str = "Test Corp",
     text: str = "",
     posted_at: datetime = None,
-    function_family: FunctionFamily = FunctionFamily.SWE
+    function_family: str = "SWE"
 ) -> Posting:
     """Create a test posting."""
     if posted_at is None:
@@ -243,15 +243,15 @@ class TestFixturePostings:
                 ).replace(tzinfo=None)
 
             # Determine function family
-            family = FunctionFamily.SWE
+            family = "SWE"
             if fixture.get("expected_family"):
-                family = FunctionFamily(fixture["expected_family"])
+                family = fixture["expected_family"]
             elif "pm" in fixture["title"].lower() or "product" in fixture["title"].lower():
-                family = FunctionFamily.PM
+                family = "PM"
             elif "consult" in fixture["title"].lower():
-                family = FunctionFamily.CONSULTING
+                family = "Consulting"
             elif "banking" in fixture["title"].lower() or "ib" in fixture["title"].lower():
-                family = FunctionFamily.IB
+                family = "IB"
 
             posting = Posting(
                 company=fixture["company"],

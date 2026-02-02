@@ -7,7 +7,7 @@ from anthropic import Anthropic
 from pydantic import ValidationError
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from app.extract.normalize import FunctionFamily, Posting
+from app.extract.normalize import Posting
 from app.llm.prompts import SYSTEM_PROMPT, format_posting_for_prompt
 from app.llm.schema import LLMClassificationResponse
 from app.logging_config import get_logger
@@ -122,8 +122,8 @@ class ClaudeClient:
             return posting
 
         # Update posting with LLM data
-        if result.role_family in ['SWE', 'PM', 'Consulting', 'IB', 'Other']:
-            posting.function_family = FunctionFamily(result.role_family)
+        # Set function family directly as string
+        posting.function_family = result.role_family
 
         posting.underclass_evidence = result.underclass_evidence
         posting.why_fits = result.why_fits

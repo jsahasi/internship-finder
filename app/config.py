@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings
 
 class SearchConfig(BaseModel):
     """Search provider configuration."""
-    provider: str = Field(default="google_cse", pattern="^(google_cse|bing|serpapi)$")
+    provider: str = Field(default="claude", pattern="^(claude|google_cse|bing|serpapi)$")
     recency_days: int = Field(default=7, ge=1, le=30)
     queries: list[str] = Field(default_factory=list)
     max_results_per_query: int = Field(default=50, ge=1, le=100)
@@ -27,6 +27,85 @@ class ATSCompanies(BaseModel):
 class TargetsConfig(BaseModel):
     """Target companies configuration."""
     ats_companies: ATSCompanies = Field(default_factory=ATSCompanies)
+
+
+class FunctionFamilyConfig(BaseModel):
+    """Configuration for a single function family."""
+    display_name: str = Field(..., description="Human-readable name")
+    title_patterns: list[str] = Field(default_factory=list, description="Regex patterns for title matching")
+    description_patterns: list[str] = Field(default_factory=list, description="Regex patterns for description matching")
+    boost_keywords: list[str] = Field(default_factory=list, description="Keywords that boost classification confidence")
+    target: bool = Field(default=True, description="Whether this is a target function for inclusion")
+
+
+class FunctionsConfig(BaseModel):
+    """Function families configuration."""
+    families: dict[str, FunctionFamilyConfig] = Field(default_factory=lambda: {
+        "SWE": FunctionFamilyConfig(
+            display_name="Software Engineering",
+            title_patterns=[
+                r'\b(?:software|swe|developer|engineer(?:ing)?|programming|coding)\b',
+                r'\b(?:backend|frontend|full[- ]?stack|devops|sre|platform)\b',
+                r'\b(?:data\s+engineer|ml\s+engineer|machine\s+learning)\b',
+                r'\b(?:ios|android|mobile)\s+(?:developer|engineer)\b',
+                r'\b(?:web\s+developer|application\s+developer)\b',
+            ],
+            boost_keywords=[
+                'python', 'java', 'javascript', 'typescript', 'react', 'node',
+                'sql', 'database', 'api', 'cloud', 'aws', 'azure', 'gcp',
+                'git', 'agile', 'scrum', 'ci/cd', 'kubernetes', 'docker'
+            ],
+            target=True
+        ),
+        "PM": FunctionFamilyConfig(
+            display_name="Product Management",
+            title_patterns=[
+                r'\b(?:product\s+manag|pm\b|product\s+lead)',
+                r'\b(?:program\s+manag|technical\s+program)\b',
+                r'\b(?:product\s+owner|product\s+strateg)\b',
+                r'\bapm\b',
+            ],
+            boost_keywords=[
+                'roadmap', 'stakeholder', 'user research', 'sprint', 'backlog',
+                'prioritization', 'metrics', 'kpi', 'a/b test', 'user story',
+                'product vision', 'go-to-market', 'feature'
+            ],
+            target=True
+        ),
+        "Consulting": FunctionFamilyConfig(
+            display_name="Consulting",
+            title_patterns=[
+                r'\b(?:consult(?:ant|ing)?)\b',
+                r'\b(?:strategy|strateg(?:ic|y)\s+(?:analyst|associate))\b',
+                r'\b(?:management\s+consult|business\s+analyst)\b',
+                r'\b(?:advisory|transformation)\b',
+            ],
+            boost_keywords=[
+                'client', 'engagement', 'deliverable', 'workstream', 'framework',
+                'recommendation', 'presentation', 'deck', 'case study', 'bain',
+                'mckinsey', 'bcg', 'deloitte', 'accenture', 'pwc', 'ey', 'kpmg'
+            ],
+            target=True
+        ),
+        "IB": FunctionFamilyConfig(
+            display_name="Investment Banking",
+            title_patterns=[
+                r'\b(?:investment\s+bank(?:ing)?|ib\s+analyst)\b',
+                r'\b(?:m&a|mergers?\s+(?:and|&)\s+acquisitions?)\b',
+                r'\b(?:capital\s+markets|equity\s+research)\b',
+                r'\b(?:corporate\s+finance|financial\s+analyst)\b',
+                r'\b(?:private\s+equity|venture\s+capital|pe/vc)\b',
+                r'\b(?:trading|sales\s+(?:and|&)\s+trading)\b',
+                r'\bsummer\s+analyst\b',
+            ],
+            boost_keywords=[
+                'deal', 'transaction', 'valuation', 'dcf', 'lbo', 'pitch book',
+                'financial model', 'due diligence', 'goldman', 'morgan stanley',
+                'jpmorgan', 'citi', 'barclays', 'bofa', 'ubs', 'credit suisse'
+            ],
+            target=True
+        ),
+    })
 
 
 class KeywordsConfig(BaseModel):
@@ -71,6 +150,7 @@ class AppConfig(BaseModel):
     targets: TargetsConfig = Field(default_factory=TargetsConfig)
     keywords: KeywordsConfig = Field(default_factory=KeywordsConfig)
     exclusions: ExclusionsConfig = Field(default_factory=ExclusionsConfig)
+    functions: FunctionsConfig = Field(default_factory=FunctionsConfig)
     email: EmailConfig = Field(default_factory=EmailConfig)
     database_path: str = Field(default="internships.db")
 

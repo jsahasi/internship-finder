@@ -3,131 +3,176 @@
 import re
 from typing import Optional
 
-from app.extract.normalize import FunctionFamily
+from app.config import FunctionsConfig
+from app.extract.normalize import OTHER_FUNCTION
 
 
-# Title patterns for each function family
-TAXONOMY_PATTERNS: dict[FunctionFamily, list[re.Pattern]] = {
-    FunctionFamily.SWE: [
-        re.compile(r'\b(?:software|swe|developer|engineer(?:ing)?|programming|coding)\b', re.I),
-        re.compile(r'\b(?:backend|frontend|full[- ]?stack|devops|sre|platform)\b', re.I),
-        re.compile(r'\b(?:data\s+engineer|ml\s+engineer|machine\s+learning)\b', re.I),
-        re.compile(r'\b(?:ios|android|mobile)\s+(?:developer|engineer)\b', re.I),
-        re.compile(r'\b(?:web\s+developer|application\s+developer)\b', re.I),
-    ],
-    FunctionFamily.PM: [
-        re.compile(r'\b(?:product\s+manag|pm\b|product\s+lead)', re.I),
-        re.compile(r'\b(?:program\s+manag|technical\s+program)\b', re.I),
-        re.compile(r'\b(?:product\s+owner|product\s+strateg)\b', re.I),
-        re.compile(r'\bapm\b', re.I),  # Associate Product Manager
-    ],
-    FunctionFamily.CONSULTING: [
-        re.compile(r'\b(?:consult(?:ant|ing)?)\b', re.I),
-        re.compile(r'\b(?:strategy|strateg(?:ic|y)\s+(?:analyst|associate))\b', re.I),
-        re.compile(r'\b(?:management\s+consult|business\s+analyst)\b', re.I),
-        re.compile(r'\b(?:advisory|transformation)\b', re.I),
-    ],
-    FunctionFamily.IB: [
-        re.compile(r'\b(?:investment\s+bank(?:ing)?|ib\s+analyst)\b', re.I),
-        re.compile(r'\b(?:m&a|mergers?\s+(?:and|&)\s+acquisitions?)\b', re.I),
-        re.compile(r'\b(?:capital\s+markets|equity\s+research)\b', re.I),
-        re.compile(r'\b(?:corporate\s+finance|financial\s+analyst)\b', re.I),
-        re.compile(r'\b(?:private\s+equity|venture\s+capital|pe/vc)\b', re.I),
-        re.compile(r'\b(?:trading|sales\s+(?:and|&)\s+trading)\b', re.I),
-        re.compile(r'\bsummer\s+analyst\b', re.I),  # Common IB title
-    ],
-}
+class TaxonomyClassifier:
+    """Configurable taxonomy classifier for job functions."""
 
-# Keywords that boost classification confidence
-BOOST_KEYWORDS: dict[FunctionFamily, list[str]] = {
-    FunctionFamily.SWE: [
-        'python', 'java', 'javascript', 'typescript', 'react', 'node',
-        'sql', 'database', 'api', 'cloud', 'aws', 'azure', 'gcp',
-        'git', 'agile', 'scrum', 'ci/cd', 'kubernetes', 'docker'
-    ],
-    FunctionFamily.PM: [
-        'roadmap', 'stakeholder', 'user research', 'sprint', 'backlog',
-        'prioritization', 'metrics', 'kpi', 'a/b test', 'user story',
-        'product vision', 'go-to-market', 'feature'
-    ],
-    FunctionFamily.CONSULTING: [
-        'client', 'engagement', 'deliverable', 'workstream', 'framework',
-        'recommendation', 'presentation', 'deck', 'case study', 'bain',
-        'mckinsey', 'bcg', 'deloitte', 'accenture', 'pwc', 'ey', 'kpmg'
-    ],
-    FunctionFamily.IB: [
-        'deal', 'transaction', 'valuation', 'dcf', 'lbo', 'pitch book',
-        'financial model', 'due diligence', 'goldman', 'morgan stanley',
-        'jpmorgan', 'citi', 'barclays', 'bofa', 'ubs', 'credit suisse'
-    ],
-}
+    def __init__(self, functions_config: FunctionsConfig):
+        """Initialize classifier with configuration.
+
+        Args:
+            functions_config: Function families configuration.
+        """
+        self.config = functions_config
+        self._compiled_patterns: dict[str, list[re.Pattern]] = {}
+        self._compile_patterns()
+
+    def _compile_patterns(self) -> None:
+        """Compile regex patterns for each function family."""
+        for family_key, family_config in self.config.families.items():
+            patterns = []
+            for pattern_str in family_config.title_patterns:
+                try:
+                    patterns.append(re.compile(pattern_str, re.IGNORECASE))
+                except re.error:
+                    pass  # Skip invalid patterns
+            for pattern_str in family_config.description_patterns:
+                try:
+                    patterns.append(re.compile(pattern_str, re.IGNORECASE))
+                except re.error:
+                    pass
+            self._compiled_patterns[family_key] = patterns
+
+    def classify(self, title: str, description: str = "") -> tuple[str, float]:
+        """Classify a job posting into a function family.
+
+        Args:
+            title: Job title.
+            description: Job description text.
+
+        Returns:
+            Tuple of (function family key, confidence score 0-1).
+        """
+        combined_text = f"{title} {description}".lower()
+        scores: dict[str, float] = {key: 0.0 for key in self.config.families}
+
+        # Score based on patterns
+        for family_key, patterns in self._compiled_patterns.items():
+            for pattern in patterns:
+                if pattern.search(title):
+                    scores[family_key] += 3.0  # Title match is strong signal
+                if pattern.search(description):
+                    scores[family_key] += 0.5  # Description match is weaker
+
+        # Boost based on keywords
+        for family_key, family_config in self.config.families.items():
+            for keyword in family_config.boost_keywords:
+                if keyword.lower() in combined_text:
+                    scores[family_key] += 0.3
+
+        # Find best match
+        if not scores:
+            return OTHER_FUNCTION, 0.0
+
+        best_family = max(scores, key=scores.get)
+        best_score = scores[best_family]
+
+        # Normalize confidence (cap at 1.0)
+        confidence = min(best_score / 5.0, 1.0)
+
+        # If no strong signal, return OTHER
+        if best_score < 1.0:
+            return OTHER_FUNCTION, 0.0
+
+        return best_family, confidence
+
+    def is_target_function(self, family: str) -> bool:
+        """Check if function family is a target type.
+
+        Args:
+            family: Function family key.
+
+        Returns:
+            True if this family is marked as a target.
+        """
+        if family == OTHER_FUNCTION:
+            return False
+        family_config = self.config.families.get(family)
+        if family_config is None:
+            return False
+        return family_config.target
+
+    def get_display_name(self, family: str) -> str:
+        """Get human-readable name for function family.
+
+        Args:
+            family: Function family key.
+
+        Returns:
+            Display name string.
+        """
+        if family == OTHER_FUNCTION:
+            return "Other"
+        family_config = self.config.families.get(family)
+        if family_config is None:
+            return family
+        return family_config.display_name
+
+    def get_target_families(self) -> list[str]:
+        """Get list of target function family keys.
+
+        Returns:
+            List of family keys where target=True.
+        """
+        return [
+            key for key, config in self.config.families.items()
+            if config.target
+        ]
 
 
-def classify_function(title: str, description: str = "") -> tuple[FunctionFamily, float]:
+# Module-level functions for backward compatibility
+_default_classifier: Optional[TaxonomyClassifier] = None
+
+
+def get_default_classifier() -> TaxonomyClassifier:
+    """Get or create default classifier with default config."""
+    global _default_classifier
+    if _default_classifier is None:
+        _default_classifier = TaxonomyClassifier(FunctionsConfig())
+    return _default_classifier
+
+
+def classify_function(title: str, description: str = "") -> tuple[str, float]:
     """Classify a job posting into a function family.
+
+    Uses default configuration. For custom config, use TaxonomyClassifier directly.
 
     Args:
         title: Job title.
         description: Job description text.
 
     Returns:
-        Tuple of (FunctionFamily, confidence score 0-1).
+        Tuple of (function family key, confidence score 0-1).
     """
-    combined_text = f"{title} {description}".lower()
-    scores: dict[FunctionFamily, float] = {f: 0.0 for f in FunctionFamily}
-
-    # Score based on title patterns (weighted heavily)
-    for family, patterns in TAXONOMY_PATTERNS.items():
-        for pattern in patterns:
-            if pattern.search(title):
-                scores[family] += 3.0  # Title match is strong signal
-            if pattern.search(description):
-                scores[family] += 0.5  # Description match is weaker
-
-    # Boost based on keywords in description
-    for family, keywords in BOOST_KEYWORDS.items():
-        for keyword in keywords:
-            if keyword.lower() in combined_text:
-                scores[family] += 0.3
-
-    # Find best match
-    best_family = max(scores, key=scores.get)
-    best_score = scores[best_family]
-
-    # Normalize confidence (cap at 1.0)
-    confidence = min(best_score / 5.0, 1.0)
-
-    # If no strong signal, return OTHER
-    if best_score < 1.0:
-        return FunctionFamily.OTHER, 0.0
-
-    return best_family, confidence
+    return get_default_classifier().classify(title, description)
 
 
-def is_target_function(family: FunctionFamily) -> bool:
-    """Check if function family is one of the target types.
+def is_target_function(family: str) -> bool:
+    """Check if function family is a target type.
+
+    Uses default configuration. For custom config, use TaxonomyClassifier directly.
 
     Args:
-        family: Function family to check.
+        family: Function family key.
 
     Returns:
-        True if SWE, PM, Consulting, or IB.
+        True if this family is marked as a target.
     """
-    return family in {
-        FunctionFamily.SWE,
-        FunctionFamily.PM,
-        FunctionFamily.CONSULTING,
-        FunctionFamily.IB
-    }
+    return get_default_classifier().is_target_function(family)
 
 
-def get_function_display_name(family: FunctionFamily) -> str:
-    """Get human-readable name for function family."""
-    names = {
-        FunctionFamily.SWE: "Software Engineering",
-        FunctionFamily.PM: "Product Management",
-        FunctionFamily.CONSULTING: "Consulting",
-        FunctionFamily.IB: "Investment Banking",
-        FunctionFamily.OTHER: "Other"
-    }
-    return names.get(family, "Unknown")
+def get_function_display_name(family: str) -> str:
+    """Get human-readable name for function family.
+
+    Uses default configuration. For custom config, use TaxonomyClassifier directly.
+
+    Args:
+        family: Function family key.
+
+    Returns:
+        Display name string.
+    """
+    return get_default_classifier().get_display_name(family)

@@ -9,7 +9,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from app.extract.canonical import canonicalize_url
 from app.extract.dates import parse_date
-from app.extract.normalize import ATSSource, FunctionFamily, Posting
+from app.extract.normalize import ATSSource, Posting
 from app.filtering.taxonomy import classify_function
 from app.logging_config import get_logger
 

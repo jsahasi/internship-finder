@@ -5,10 +5,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
 
-from app.config import ExclusionsConfig, KeywordsConfig
+from app.config import ExclusionsConfig, FunctionsConfig, KeywordsConfig
 from app.extract.dates import is_within_days
-from app.extract.normalize import FunctionFamily, NearMiss, Posting
-from app.filtering.taxonomy import classify_function, is_target_function
+from app.extract.normalize import OTHER_FUNCTION, NearMiss, Posting
+from app.filtering.taxonomy import TaxonomyClassifier, classify_function, is_target_function
 
 
 @dataclass
@@ -39,13 +39,19 @@ class PostingFilter:
         self,
         keywords_config: KeywordsConfig,
         exclusions_config: ExclusionsConfig,
-        recency_days: int = 7
+        recency_days: int = 7,
+        functions_config: Optional[FunctionsConfig] = None
     ):
         self.keywords = keywords_config
         self.exclusions = exclusions_config
         self.recency_days = recency_days
         self.stats = FilterStats()
         self.near_misses: list[NearMiss] = []
+
+        # Initialize taxonomy classifier
+        if functions_config is None:
+            functions_config = FunctionsConfig()
+        self.taxonomy = TaxonomyClassifier(functions_config)
 
         # Compile patterns for efficiency
         self._compile_patterns()
@@ -128,17 +134,17 @@ class PostingFilter:
             )
 
         # Rule 5: Check function family
-        if posting.function_family == FunctionFamily.OTHER:
+        if posting.function_family == OTHER_FUNCTION:
             # Try to classify
-            family, confidence = classify_function(posting.title, posting.text)
+            family, confidence = self.taxonomy.classify(posting.title, posting.text)
             posting.function_family = family
             posting.confidence = confidence
 
-        if not is_target_function(posting.function_family):
+        if not self.taxonomy.is_target_function(posting.function_family):
             self.stats.excluded_wrong_function += 1
             return FilterResult(
                 included=False,
-                reason=f"Function family not in target list: {posting.function_family.value}",
+                reason=f"Function family not in target list: {posting.function_family}",
                 evidence=""
             )
 

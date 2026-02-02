@@ -7,13 +7,8 @@ from typing import Optional
 from pydantic import BaseModel, Field, computed_field
 
 
-class FunctionFamily(str, Enum):
-    """Job function categories."""
-    SWE = "SWE"
-    PM = "PM"
-    CONSULTING = "Consulting"
-    IB = "IB"
-    OTHER = "Other"
+# Default value for unclassified roles
+OTHER_FUNCTION = "Other"
 
 
 class ATSSource(str, Enum):
@@ -30,7 +25,7 @@ class Posting(BaseModel):
     """Normalized job posting model."""
     company: str = Field(..., min_length=1)
     title: str = Field(..., min_length=1)
-    function_family: FunctionFamily = Field(default=FunctionFamily.OTHER)
+    function_family: str = Field(default=OTHER_FUNCTION)
     location: str = Field(default="Not specified")
     url: str = Field(..., min_length=1)
     source: ATSSource = Field(default=ATSSource.GENERIC)
@@ -67,7 +62,7 @@ class Posting(BaseModel):
         return {
             "Company": self.company,
             "Role": self.title,
-            "Function": self.function_family.value,
+            "Function": self.function_family,
             "Location": self.location,
             "Posted": self.posted_at.strftime("%Y-%m-%d") if self.posted_at else "Unknown",
             "Evidence": self.underclass_evidence or "",

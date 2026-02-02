@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.extract.normalize import FunctionFamily
+from app.extract.normalize import OTHER_FUNCTION
 from app.filtering.taxonomy import (
     classify_function,
     is_target_function,
@@ -16,13 +16,13 @@ class TestClassifyFunction:
     def test_swe_from_title(self):
         """Should classify SWE from title."""
         family, confidence = classify_function("Software Engineering Intern")
-        assert family == FunctionFamily.SWE
+        assert family == "SWE"
         assert confidence > 0.5
 
     def test_swe_developer(self):
         """Should classify developer roles as SWE."""
         family, _ = classify_function("Backend Developer Intern")
-        assert family == FunctionFamily.SWE
+        assert family == "SWE"
 
     def test_swe_from_description(self):
         """Should boost SWE from description keywords."""
@@ -30,34 +30,34 @@ class TestClassifyFunction:
             "Technical Intern",
             "Work with Python, JavaScript, and AWS"
         )
-        assert family == FunctionFamily.SWE
+        assert family == "SWE"
 
     def test_pm_from_title(self):
         """Should classify PM from title."""
         family, confidence = classify_function("Product Manager Intern")
-        assert family == FunctionFamily.PM
+        assert family == "PM"
         assert confidence > 0.5
 
     def test_pm_apm(self):
         """Should classify APM as PM."""
         family, _ = classify_function("APM Intern")
-        assert family == FunctionFamily.PM
+        assert family == "PM"
 
     def test_pm_program_manager(self):
         """Should classify program manager as PM."""
         family, _ = classify_function("Technical Program Manager Intern")
-        assert family == FunctionFamily.PM
+        assert family == "PM"
 
     def test_consulting_from_title(self):
         """Should classify consulting from title."""
         family, confidence = classify_function("Management Consulting Intern")
-        assert family == FunctionFamily.CONSULTING
+        assert family == "Consulting"
         assert confidence > 0.5
 
     def test_consulting_strategy(self):
         """Should classify strategy analyst as consulting."""
         family, _ = classify_function("Strategy Analyst Intern")
-        assert family == FunctionFamily.CONSULTING
+        assert family == "Consulting"
 
     def test_consulting_from_description(self):
         """Should boost consulting from description."""
@@ -65,18 +65,18 @@ class TestClassifyFunction:
             "Business Intern",
             "Work with clients on McKinsey engagements"
         )
-        assert family == FunctionFamily.CONSULTING
+        assert family == "Consulting"
 
     def test_ib_from_title(self):
         """Should classify IB from title."""
         family, confidence = classify_function("Investment Banking Analyst Intern")
-        assert family == FunctionFamily.IB
+        assert family == "IB"
         assert confidence > 0.5
 
     def test_ib_ma(self):
         """Should classify M&A as IB."""
         family, _ = classify_function("M&A Analyst Intern")
-        assert family == FunctionFamily.IB
+        assert family == "IB"
 
     def test_ib_from_description(self):
         """Should boost IB from description."""
@@ -84,22 +84,22 @@ class TestClassifyFunction:
             "Finance Intern",
             "Work on valuations, DCF models, and pitch books at Goldman Sachs"
         )
-        assert family == FunctionFamily.IB
+        assert family == "IB"
 
     def test_other_marketing(self):
         """Should classify marketing as OTHER."""
         family, _ = classify_function("Marketing Intern")
-        assert family == FunctionFamily.OTHER
+        assert family == OTHER_FUNCTION
 
     def test_other_hr(self):
         """Should classify HR as OTHER."""
         family, _ = classify_function("Human Resources Intern")
-        assert family == FunctionFamily.OTHER
+        assert family == OTHER_FUNCTION
 
     def test_ambiguous_defaults_to_other(self):
         """Ambiguous titles should be OTHER."""
         family, confidence = classify_function("Summer Intern")
-        assert family == FunctionFamily.OTHER
+        assert family == OTHER_FUNCTION
         assert confidence == 0.0
 
 
@@ -108,23 +108,23 @@ class TestIsTargetFunction:
 
     def test_swe_is_target(self):
         """SWE should be a target function."""
-        assert is_target_function(FunctionFamily.SWE)
+        assert is_target_function("SWE")
 
     def test_pm_is_target(self):
         """PM should be a target function."""
-        assert is_target_function(FunctionFamily.PM)
+        assert is_target_function("PM")
 
     def test_consulting_is_target(self):
         """Consulting should be a target function."""
-        assert is_target_function(FunctionFamily.CONSULTING)
+        assert is_target_function("Consulting")
 
     def test_ib_is_target(self):
         """IB should be a target function."""
-        assert is_target_function(FunctionFamily.IB)
+        assert is_target_function("IB")
 
     def test_other_not_target(self):
         """OTHER should not be a target function."""
-        assert not is_target_function(FunctionFamily.OTHER)
+        assert not is_target_function(OTHER_FUNCTION)
 
 
 class TestGetFunctionDisplayName:
@@ -132,44 +132,44 @@ class TestGetFunctionDisplayName:
 
     def test_swe_display(self):
         """SWE should have full display name."""
-        assert get_function_display_name(FunctionFamily.SWE) == "Software Engineering"
+        assert get_function_display_name("SWE") == "Software Engineering"
 
     def test_pm_display(self):
         """PM should have full display name."""
-        assert get_function_display_name(FunctionFamily.PM) == "Product Management"
+        assert get_function_display_name("PM") == "Product Management"
 
     def test_consulting_display(self):
         """Consulting should have display name."""
-        assert get_function_display_name(FunctionFamily.CONSULTING) == "Consulting"
+        assert get_function_display_name("Consulting") == "Consulting"
 
     def test_ib_display(self):
         """IB should have full display name."""
-        assert get_function_display_name(FunctionFamily.IB) == "Investment Banking"
+        assert get_function_display_name("IB") == "Investment Banking"
 
     def test_other_display(self):
         """OTHER should have display name."""
-        assert get_function_display_name(FunctionFamily.OTHER) == "Other"
+        assert get_function_display_name(OTHER_FUNCTION) == "Other"
 
 
 class TestRealWorldTitles:
     """Tests with real-world job titles."""
 
     @pytest.mark.parametrize("title,expected", [
-        ("Software Engineer Intern - Summer 2026", FunctionFamily.SWE),
-        ("SWE Intern, Infrastructure", FunctionFamily.SWE),
-        ("Full Stack Developer Intern", FunctionFamily.SWE),
-        ("iOS Engineer Intern", FunctionFamily.SWE),
-        ("Machine Learning Engineer Intern", FunctionFamily.SWE),
-        ("Product Manager Intern, Growth", FunctionFamily.PM),
-        ("Associate Product Manager (APM) Intern", FunctionFamily.PM),
-        ("Technical Program Manager Intern", FunctionFamily.PM),
-        ("Business Analyst Intern - Consulting", FunctionFamily.CONSULTING),
-        ("Strategy Consulting Summer Analyst", FunctionFamily.CONSULTING),
-        ("Management Consultant Intern", FunctionFamily.CONSULTING),
-        ("Investment Banking Summer Analyst", FunctionFamily.IB),
-        ("IB Analyst - M&A Group", FunctionFamily.IB),
-        ("Capital Markets Intern", FunctionFamily.IB),
-        ("Private Equity Summer Analyst", FunctionFamily.IB),
+        ("Software Engineer Intern - Summer 2026", "SWE"),
+        ("SWE Intern, Infrastructure", "SWE"),
+        ("Full Stack Developer Intern", "SWE"),
+        ("iOS Engineer Intern", "SWE"),
+        ("Machine Learning Engineer Intern", "SWE"),
+        ("Product Manager Intern, Growth", "PM"),
+        ("Associate Product Manager (APM) Intern", "PM"),
+        ("Technical Program Manager Intern", "PM"),
+        ("Business Analyst Intern - Consulting", "Consulting"),
+        ("Strategy Consulting Summer Analyst", "Consulting"),
+        ("Management Consultant Intern", "Consulting"),
+        ("Investment Banking Summer Analyst", "IB"),
+        ("IB Analyst - M&A Group", "IB"),
+        ("Capital Markets Intern", "IB"),
+        ("Private Equity Summer Analyst", "IB"),
     ])
     def test_real_titles(self, title, expected):
         """Test classification of real-world titles."""
