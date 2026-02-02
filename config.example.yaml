@@ -47,6 +47,7 @@ targets:
 # Keywords for filtering
 keywords:
   # Terms indicating underclass-targeted positions
+  # Note: Avoid generic words like "discovery" or "explore" which appear in many job descriptions
   underclass:
     - freshman
     - sophomore
@@ -56,14 +57,24 @@ keywords:
     - second year
     - underclassmen
     - underclassman
-    - discovery
     - pre-internship
     - early insight
     - early insights
-    - explore
     - freshman/sophomore
     - 1st year
     - 2nd year
+
+  # Terms that indicate an internship/co-op (vs full-time role)
+  internship_terms:
+    - intern
+    - internship
+    - co-op
+    - coop
+    - summer analyst
+    - summer associate
+    - discovery program
+    - explore program
+    - early career
 
   # Terms for role matching
   role_terms:
