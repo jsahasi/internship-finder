@@ -159,7 +159,7 @@ class ClaudeClient:
 
             logger.debug(
                 f"Classified '{posting.title}': "
-                f"family={posting.function_family.value}, "
+                f"family={posting.function_family}, "
                 f"confidence={posting.confidence:.2f}"
             )
 

@@ -15,6 +15,7 @@ class SearchConfig(BaseModel):
     recency_days: int = Field(default=7, ge=1, le=30)
     queries: list[str] = Field(default_factory=list)
     max_results_per_query: int = Field(default=50, ge=1, le=100)
+    require_post_date: bool = Field(default=False, description="Require postings to have a date (LLM search results often lack dates)")
 
 
 class ATSCompanies(BaseModel):
@@ -112,9 +113,14 @@ class KeywordsConfig(BaseModel):
     """Keyword configuration for filtering."""
     underclass: list[str] = Field(default_factory=lambda: [
         "freshman", "sophomore", "first-year", "first year", "second-year",
-        "second year", "underclassmen", "underclassman", "discovery",
-        "pre-internship", "early insight", "early insights", "explore",
+        "second year", "underclassmen", "underclassman",
+        "pre-internship", "early insight", "early insights",
         "freshman/sophomore", "1st year", "2nd year"
+    ])
+    internship_terms: list[str] = Field(default_factory=lambda: [
+        "intern", "internship", "co-op", "coop", "summer analyst",
+        "summer associate", "discovery program", "explore program",
+        "early career", "new grad"
     ])
     role_terms: list[str] = Field(default_factory=lambda: [
         "software", "engineer", "developer", "swe", "product", "pm",

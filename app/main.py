@@ -386,7 +386,8 @@ def run_pipeline(
         config.keywords,
         config.exclusions,
         config.search.recency_days,
-        config.functions
+        config.functions,
+        require_post_date=config.search.require_post_date
     )
     renderer = ReportRenderer()
 

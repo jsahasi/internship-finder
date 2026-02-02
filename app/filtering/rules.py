@@ -27,6 +27,7 @@ class FilterStats:
     excluded_year: int = 0
     excluded_upperclass: int = 0
     excluded_no_underclass: int = 0
+    excluded_not_internship: int = 0
     excluded_wrong_function: int = 0
     excluded_no_date: int = 0
     excluded_too_old: int = 0
@@ -40,11 +41,13 @@ class PostingFilter:
         keywords_config: KeywordsConfig,
         exclusions_config: ExclusionsConfig,
         recency_days: int = 7,
-        functions_config: Optional[FunctionsConfig] = None
+        functions_config: Optional[FunctionsConfig] = None,
+        require_post_date: bool = False
     ):
         self.keywords = keywords_config
         self.exclusions = exclusions_config
         self.recency_days = recency_days
+        self.require_post_date = require_post_date
         self.stats = FilterStats()
         self.near_misses: list[NearMiss] = []
 
@@ -74,6 +77,12 @@ class PostingFilter:
         )
         self.underclass_pattern = re.compile(rf'\b({under_terms})\b', re.IGNORECASE)
 
+        # Internship terms pattern
+        internship_terms = '|'.join(
+            re.escape(term) for term in self.keywords.internship_terms
+        )
+        self.internship_pattern = re.compile(rf'\b({internship_terms})\b', re.IGNORECASE)
+
     def filter_posting(self, posting: Posting) -> FilterResult:
         """Apply all filter rules to a posting.
 
@@ -84,7 +93,11 @@ class PostingFilter:
             FilterResult with decision and reason.
         """
         self.stats.total_processed += 1
+        title_lower = posting.title.lower()
         text = f"{posting.title} {posting.text}".lower()
+
+        # Check if title has strong underclass signal (overrides upperclass terms in body)
+        title_has_underclass = self.underclass_pattern.search(title_lower) is not None
 
         # Rule 1: Check for excluded graduation years
         year_match = self.year_pattern.search(text)
@@ -96,26 +109,38 @@ class PostingFilter:
                 evidence=self._extract_context(text, year_match)
             )
 
-        # Rule 2: Check for upperclass terms
-        upper_match = self.upperclass_pattern.search(text)
-        if upper_match:
-            self.stats.excluded_upperclass += 1
-            return FilterResult(
-                included=False,
-                reason=f"Contains upperclass term: {upper_match.group(1)}",
-                evidence=self._extract_context(text, upper_match)
-            )
+        # Rule 2: Check for upperclass terms (skip if title has clear underclass signal)
+        if not title_has_underclass:
+            upper_match = self.upperclass_pattern.search(text)
+            if upper_match:
+                self.stats.excluded_upperclass += 1
+                return FilterResult(
+                    included=False,
+                    reason=f"Contains upperclass term: {upper_match.group(1)}",
+                    evidence=self._extract_context(text, upper_match)
+                )
 
-        # Rule 3: Check post date
-        if posting.posted_at is None:
-            self.stats.excluded_no_date += 1
+        # Rule 3: Must be internship/co-op (check title and text)
+        internship_match = self.internship_pattern.search(text)
+        if not internship_match:
+            self.stats.excluded_not_internship += 1
             return FilterResult(
                 included=False,
-                reason="No reliable post date available",
+                reason="Not an internship/co-op position",
                 evidence=""
             )
 
-        if not is_within_days(posting.posted_at, self.recency_days):
+        # Rule 4: Check post date (only if required)
+        if posting.posted_at is None:
+            if self.require_post_date:
+                self.stats.excluded_no_date += 1
+                return FilterResult(
+                    included=False,
+                    reason="No reliable post date available",
+                    evidence=""
+                )
+            # No date but not required - continue with other checks
+        elif not is_within_days(posting.posted_at, self.recency_days):
             self.stats.excluded_too_old += 1
             return FilterResult(
                 included=False,
@@ -123,7 +148,7 @@ class PostingFilter:
                 evidence=f"Posted: {posting.posted_at.strftime('%Y-%m-%d')}"
             )
 
-        # Rule 4: Must have underclass signal
+        # Rule 5: Must have underclass signal
         under_match = self.underclass_pattern.search(text)
         if not under_match:
             self.stats.excluded_no_underclass += 1
@@ -218,6 +243,7 @@ class PostingFilter:
             f"Included: {s.included} | "
             f"Excluded - Year: {s.excluded_year}, "
             f"Upperclass: {s.excluded_upperclass}, "
+            f"Not internship: {s.excluded_not_internship}, "
             f"No underclass: {s.excluded_no_underclass}, "
             f"Wrong function: {s.excluded_wrong_function}, "
             f"No date: {s.excluded_no_date}, "

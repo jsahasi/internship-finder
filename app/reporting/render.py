@@ -219,7 +219,7 @@ class ReportRenderer:
             formatted_postings.append({
                 'company': p.company,
                 'title': p.title,
-                'function_family': p.function_family.value,
+                'function_family': p.function_family,
                 'location': p.location,
                 'posted': p.posted_at.strftime('%Y-%m-%d') if p.posted_at else 'Unknown',
                 'evidence': p.underclass_evidence or '',
@@ -277,7 +277,7 @@ class ReportRenderer:
             for p in postings:
                 lines.extend([
                     f"\n{p.company} - {p.title}",
-                    f"  Function: {p.function_family.value}",
+                    f"  Function: {p.function_family}",
                     f"  Location: {p.location}",
                     f"  Posted: {p.posted_at.strftime('%Y-%m-%d') if p.posted_at else 'Unknown'}",
                     f"  Evidence: {p.underclass_evidence or 'N/A'}",
