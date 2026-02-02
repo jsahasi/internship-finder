@@ -16,6 +16,7 @@ class SearchConfig(BaseModel):
     queries: list[str] = Field(default_factory=list)
     max_results_per_query: int = Field(default=50, ge=1, le=100)
     require_post_date: bool = Field(default=False, description="Require postings to have a date (LLM search results often lack dates)")
+    require_underclass_terms: bool = Field(default=False, description="Require explicit underclass terms (freshman/sophomore). If false, includes any internship not explicitly for upperclassmen.")
 
 
 class ATSCompanies(BaseModel):
@@ -119,8 +120,7 @@ class KeywordsConfig(BaseModel):
     ])
     internship_terms: list[str] = Field(default_factory=lambda: [
         "intern", "internship", "co-op", "coop", "summer analyst",
-        "summer associate", "discovery program", "explore program",
-        "early career", "new grad"
+        "summer associate", "discovery program", "explore program"
     ])
     role_terms: list[str] = Field(default_factory=lambda: [
         "software", "engineer", "developer", "swe", "product", "pm",
@@ -134,7 +134,7 @@ class ExclusionsConfig(BaseModel):
     upperclass_terms: list[str] = Field(default_factory=lambda: [
         "junior", "senior", "penultimate", "rising senior", "final year",
         "final-year", "3rd year", "4th year", "upperclassmen", "upperclassman",
-        "third year", "fourth year", "junior/senior"
+        "third year", "fourth year", "junior/senior", "new grad", "new graduate"
     ])
 
 

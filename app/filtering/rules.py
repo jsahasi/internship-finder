@@ -42,12 +42,14 @@ class PostingFilter:
         exclusions_config: ExclusionsConfig,
         recency_days: int = 7,
         functions_config: Optional[FunctionsConfig] = None,
-        require_post_date: bool = False
+        require_post_date: bool = False,
+        require_underclass_terms: bool = False
     ):
         self.keywords = keywords_config
         self.exclusions = exclusions_config
         self.recency_days = recency_days
         self.require_post_date = require_post_date
+        self.require_underclass_terms = require_underclass_terms
         self.stats = FilterStats()
         self.near_misses: list[NearMiss] = []
 
@@ -120,15 +122,21 @@ class PostingFilter:
                     evidence=self._extract_context(text, upper_match)
                 )
 
-        # Rule 3: Must be internship/co-op (check title and text)
-        internship_match = self.internship_pattern.search(text)
-        if not internship_match:
-            self.stats.excluded_not_internship += 1
-            return FilterResult(
-                included=False,
-                reason="Not an internship/co-op position",
-                evidence=""
-            )
+        # Rule 3: Must be internship/co-op (check title primarily, fall back to text for programs)
+        # First check title for intern/co-op terms
+        internship_in_title = self.internship_pattern.search(title_lower)
+        if not internship_in_title:
+            # Allow if text contains program-specific terms (discovery program, etc.)
+            # but not just a casual mention of "intern" in description
+            program_terms = ['discovery program', 'explore program', 'summer analyst', 'summer associate']
+            has_program_term = any(term in text for term in program_terms)
+            if not has_program_term:
+                self.stats.excluded_not_internship += 1
+                return FilterResult(
+                    included=False,
+                    reason="Not an internship/co-op position",
+                    evidence=""
+                )
 
         # Rule 4: Check post date (only if required)
         if posting.posted_at is None:
@@ -148,9 +156,9 @@ class PostingFilter:
                 evidence=f"Posted: {posting.posted_at.strftime('%Y-%m-%d')}"
             )
 
-        # Rule 5: Must have underclass signal
+        # Rule 5: Check for underclass signal (optional based on config)
         under_match = self.underclass_pattern.search(text)
-        if not under_match:
+        if self.require_underclass_terms and not under_match:
             self.stats.excluded_no_underclass += 1
             return FilterResult(
                 included=False,
@@ -178,7 +186,7 @@ class PostingFilter:
         return FilterResult(
             included=True,
             reason="Passed all filters",
-            evidence=under_match.group(1)
+            evidence=under_match.group(1) if under_match else ""
         )
 
     def _extract_context(self, text: str, match: re.Match, context_chars: int = 50) -> str:
