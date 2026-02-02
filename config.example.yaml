@@ -1,0 +1,116 @@
+# Underclass Internship Scanner Configuration
+# Copy this to config.yaml and customize
+
+# Email recipients for the digest
+recipients:
+  - your.email@example.com
+
+# Search provider settings
+search:
+  # Provider: google_cse (recommended, free tier), bing, or serpapi
+  provider: google_cse
+  # Only include postings from the last N days
+  recency_days: 7
+  # Max results per search query
+  max_results_per_query: 50
+  # Custom search queries (optional - defaults are generated)
+  queries: []
+
+# Target companies by ATS platform
+targets:
+  ats_companies:
+    # Greenhouse company slugs (from boards.greenhouse.io/{slug})
+    greenhouse:
+      - google
+      - stripe
+      - airbnb
+      - doordash
+      - coinbase
+      - figma
+      - notion
+      - ramp
+      - plaid
+      - robinhood
+
+    # Lever company slugs (from jobs.lever.co/{slug})
+    lever:
+      - netflix
+      - reddit
+      - pinterest
+
+    # Ashby company slugs (from jobs.ashbyhq.com/{slug})
+    ashby:
+      - openai
+      - anthropic
+      - vercel
+
+# Keywords for filtering
+keywords:
+  # Terms indicating underclass-targeted positions
+  underclass:
+    - freshman
+    - sophomore
+    - first-year
+    - first year
+    - second-year
+    - second year
+    - underclassmen
+    - underclassman
+    - discovery
+    - pre-internship
+    - early insight
+    - early insights
+    - explore
+    - freshman/sophomore
+    - 1st year
+    - 2nd year
+
+  # Terms for role matching
+  role_terms:
+    - software
+    - engineer
+    - developer
+    - swe
+    - product
+    - pm
+    - consulting
+    - consultant
+    - investment banking
+    - ib
+    - analyst
+
+# Exclusion rules
+exclusions:
+  # Graduation years to exclude (Class of 2027 = current juniors, 2028 = current seniors)
+  graduation_years:
+    - 2027
+    - 2028
+
+  # Terms that indicate upperclass targeting
+  upperclass_terms:
+    - junior
+    - senior
+    - penultimate
+    - rising senior
+    - final year
+    - final-year
+    - 3rd year
+    - 4th year
+    - upperclassmen
+    - upperclassman
+    - third year
+    - fourth year
+    - junior/senior
+
+# Email delivery settings
+email:
+  # Provider: smtp or sendgrid
+  provider: smtp
+  from_address: internships@example.com
+  # SMTP settings (if provider is smtp)
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  # smtp_user and smtp_password come from .env
+
+# Database path for deduplication state
+database_path: internships.db

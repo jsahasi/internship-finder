@@ -1,0 +1,135 @@
+[
+  {
+    "id": "include_swe_freshman",
+    "company": "Tech Corp",
+    "title": "Software Engineering Intern - Freshman/Sophomore",
+    "location": "San Francisco, CA",
+    "url": "https://boards.greenhouse.io/techcorp/jobs/123",
+    "posted_at": "2026-01-28T10:00:00Z",
+    "text": "We are looking for freshman and sophomore students interested in software development. This is our early talent program designed for first-year and second-year students. You will work on Python and JavaScript projects.",
+    "expected_decision": "include",
+    "expected_family": "SWE"
+  },
+  {
+    "id": "include_pm_discovery",
+    "company": "Product Inc",
+    "title": "Product Management Discovery Intern",
+    "location": "New York, NY",
+    "url": "https://jobs.lever.co/productinc/456",
+    "posted_at": "2026-01-29T15:00:00Z",
+    "text": "Our Discovery Program is designed for underclassmen who want to explore product management. This pre-internship experience is perfect for first-year students interested in building user-facing products.",
+    "expected_decision": "include",
+    "expected_family": "PM"
+  },
+  {
+    "id": "include_consulting_explore",
+    "company": "McKinsey",
+    "title": "Sophomore Consulting Explore Program",
+    "location": "Chicago, IL",
+    "url": "https://jobs.ashbyhq.com/mckinsey/789",
+    "posted_at": "2026-01-30T09:00:00Z",
+    "text": "The Explore Program offers sophomore students a chance to experience management consulting. This is specifically for second-year undergraduate students interested in strategy.",
+    "expected_decision": "include",
+    "expected_family": "Consulting"
+  },
+  {
+    "id": "include_ib_early_insight",
+    "company": "Goldman Sachs",
+    "title": "Investment Banking Early Insight Program",
+    "location": "New York, NY",
+    "url": "https://boards.greenhouse.io/goldmansachs/jobs/101",
+    "posted_at": "2026-01-27T12:00:00Z",
+    "text": "Early Insights is designed for freshman and sophomore students interested in investment banking and capital markets. Learn about M&A, valuations, and financial modeling.",
+    "expected_decision": "include",
+    "expected_family": "IB"
+  },
+  {
+    "id": "exclude_year_2027",
+    "company": "Bad Corp",
+    "title": "Software Engineering Intern",
+    "location": "Remote",
+    "url": "https://example.com/jobs/exclude1",
+    "posted_at": "2026-01-28T10:00:00Z",
+    "text": "Looking for Class of 2027 students for our summer internship program. This is a software engineering role for juniors.",
+    "expected_decision": "exclude",
+    "expected_reason": "year"
+  },
+  {
+    "id": "exclude_year_2028",
+    "company": "Another Corp",
+    "title": "Product Manager Intern",
+    "location": "Seattle, WA",
+    "url": "https://example.com/jobs/exclude2",
+    "posted_at": "2026-01-29T10:00:00Z",
+    "text": "Ideal candidates are graduating in 2028. We want seniors for this product management position.",
+    "expected_decision": "exclude",
+    "expected_reason": "year"
+  },
+  {
+    "id": "exclude_junior_senior",
+    "company": "Senior Inc",
+    "title": "Consulting Intern - Junior/Senior",
+    "location": "Boston, MA",
+    "url": "https://example.com/jobs/exclude3",
+    "posted_at": "2026-01-30T10:00:00Z",
+    "text": "This internship is for junior and senior undergraduates only. Penultimate year students preferred.",
+    "expected_decision": "exclude",
+    "expected_reason": "upperclass"
+  },
+  {
+    "id": "exclude_rising_senior",
+    "company": "Final Year Corp",
+    "title": "Investment Banking Summer Analyst",
+    "location": "Chicago, IL",
+    "url": "https://example.com/jobs/exclude4",
+    "posted_at": "2026-01-28T14:00:00Z",
+    "text": "For rising seniors and final-year students interested in investment banking.",
+    "expected_decision": "exclude",
+    "expected_reason": "upperclass"
+  },
+  {
+    "id": "exclude_no_underclass_signal",
+    "company": "Generic Corp",
+    "title": "Software Engineering Intern",
+    "location": "Austin, TX",
+    "url": "https://example.com/jobs/exclude5",
+    "posted_at": "2026-01-29T11:00:00Z",
+    "text": "Looking for engineering interns to work on our platform. Strong Python and Java skills required. 10-week summer program.",
+    "expected_decision": "exclude",
+    "expected_reason": "no_underclass"
+  },
+  {
+    "id": "exclude_old_posting",
+    "company": "Old Corp",
+    "title": "Freshman Software Intern",
+    "location": "Denver, CO",
+    "url": "https://example.com/jobs/exclude6",
+    "posted_at": "2025-12-01T10:00:00Z",
+    "text": "Great opportunity for freshman students interested in software engineering.",
+    "expected_decision": "exclude",
+    "expected_reason": "too_old"
+  },
+  {
+    "id": "exclude_no_date",
+    "company": "No Date Corp",
+    "title": "Sophomore PM Intern",
+    "location": "Miami, FL",
+    "url": "https://example.com/jobs/exclude7",
+    "posted_at": null,
+    "text": "Looking for sophomore students for our product team.",
+    "expected_decision": "exclude",
+    "expected_reason": "no_date"
+  },
+  {
+    "id": "exclude_wrong_function",
+    "company": "Marketing Corp",
+    "title": "Marketing Intern - Freshmen Welcome",
+    "location": "Los Angeles, CA",
+    "url": "https://example.com/jobs/exclude8",
+    "posted_at": "2026-01-30T10:00:00Z",
+    "text": "Freshman and sophomore marketing students wanted for social media management.",
+    "expected_decision": "exclude",
+    "expected_reason": "wrong_function",
+    "expected_family": "Other"
+  }
+]

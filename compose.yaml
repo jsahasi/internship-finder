@@ -1,0 +1,45 @@
+# Docker Compose for Underclass Internship Scanner
+version: '3.8'
+
+services:
+  scanner:
+    build: .
+    container_name: internship-scanner
+    restart: "no"
+
+    # Mount config and data
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+    # Environment from .env file
+    env_file:
+      - .env
+
+    # Override command for different modes
+    # Uncomment one of the following:
+
+    # Dry run (no email)
+    # command: ["python", "-m", "app.main", "--config", "config.yaml", "--dry_run"]
+
+    # Full run with email
+    command: ["python", "-m", "app.main", "--config", "config.yaml", "--run_once"]
+
+    # Debug mode
+    # command: ["python", "-m", "app.main", "--config", "config.yaml", "--dry_run", "--log_level", "DEBUG"]
+
+  # Optional: Run tests
+  test:
+    build: .
+    container_name: internship-scanner-test
+    profiles:
+      - test
+    volumes:
+      - ./tests:/app/tests:ro
+    command: ["pytest", "tests/", "-v"]
+
+# Named volumes for persistent data
+volumes:
+  data:
+  logs:
