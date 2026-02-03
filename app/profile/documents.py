@@ -1,6 +1,7 @@
 """Generate tailored resumes and cover letters."""
 
 import json
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -13,6 +14,10 @@ from app.logging_config import get_logger
 
 
 logger = get_logger()
+
+# Rate limiting constants
+TOKENS_PER_MINUTE_LIMIT = 30000
+RATE_LIMIT_BUFFER = 0.8  # Use 80% of limit to be safe
 
 
 RESUME_TAILOR_PROMPT = """You are an expert resume writer helping a college student tailor their resume for a specific internship.
@@ -125,11 +130,43 @@ class DocumentGenerator:
                 logger.warning("OpenAI package not installed")
 
         self.tokens_used = 0
+        self.tokens_this_minute = 0
+        self.minute_start_time = time.time()
+
+    def _check_rate_limit(self, estimated_tokens: int = 5000) -> None:
+        """Check and wait if approaching rate limit.
+
+        Args:
+            estimated_tokens: Estimated tokens for next request.
+        """
+        current_time = time.time()
+        elapsed = current_time - self.minute_start_time
+
+        # Reset counter if a minute has passed
+        if elapsed >= 60:
+            self.tokens_this_minute = 0
+            self.minute_start_time = current_time
+            return
+
+        # Check if we'd exceed the limit
+        safe_limit = TOKENS_PER_MINUTE_LIMIT * RATE_LIMIT_BUFFER
+        if self.tokens_this_minute + estimated_tokens > safe_limit:
+            # Wait for the remainder of the minute
+            wait_time = 60 - elapsed + 2  # Add 2 second buffer
+            logger.info(f"Rate limit: waiting {wait_time:.1f}s (used {self.tokens_this_minute} tokens this minute)")
+            time.sleep(wait_time)
+            self.tokens_this_minute = 0
+            self.minute_start_time = time.time()
 
     def _call_anthropic(self, prompt: str, max_tokens: int = 2000) -> str:
-        """Call Anthropic API."""
+        """Call Anthropic API with rate limiting."""
         if not self.anthropic_client:
             raise ValueError("Anthropic client not configured")
+
+        # Estimate tokens (roughly 4 chars per token)
+        estimated_input = len(prompt) // 4
+        estimated_total = estimated_input + max_tokens
+        self._check_rate_limit(estimated_total)
 
         response = self.anthropic_client.messages.create(
             model="claude-sonnet-4-20250514",
@@ -137,7 +174,10 @@ class DocumentGenerator:
             messages=[{"role": "user", "content": prompt}]
         )
 
-        self.tokens_used += response.usage.input_tokens + response.usage.output_tokens
+        actual_tokens = response.usage.input_tokens + response.usage.output_tokens
+        self.tokens_used += actual_tokens
+        self.tokens_this_minute += actual_tokens
+
         return response.content[0].text
 
     def _call_openai(self, prompt: str, max_tokens: int = 2000) -> str:
@@ -267,6 +307,8 @@ class DocumentGenerator:
         if profile.resume_text:
             logger.info(f"Generating tailored resume for {posting.company}")
             materials['resume'] = self.generate_tailored_resume(profile, posting)
+            # Small delay between resume and cover letter
+            time.sleep(2)
 
         logger.info(f"Generating cover letter for {posting.company}")
         materials['cover_letter'] = self.generate_cover_letter(
