@@ -40,8 +40,17 @@ Create a tailored version of this resume that:
 5. Maintains professional formatting
 6. Is concise (1 page equivalent)
 
+CRITICAL RULES - ABSOLUTELY NO VIOLATIONS:
+- Do NOT fabricate, invent, or add ANY information not in the original resume
+- Do NOT exaggerate metrics, numbers, or achievements
+- Do NOT inflate job titles, responsibilities, or impact
+- Do NOT add skills, technologies, or tools not explicitly mentioned
+- Do NOT embellish or overstate any accomplishments
+- ONLY reorder, rephrase, and highlight EXISTING content
+- If something isn't in the original resume, it CANNOT appear in the tailored version
+
 Return the tailored resume as plain text with clear sections.
-Do NOT fabricate any information - only reframe and prioritize existing content."""
+Every single fact must come directly from the original resume."""
 
 
 COVER_LETTER_PROMPT = """You are an expert cover letter writer helping a college student apply for an internship.
@@ -74,6 +83,14 @@ Write a compelling cover letter that:
 5. Is professional but shows personality
 6. Is concise (3-4 paragraphs, under 400 words)
 7. Does NOT use generic phrases like "I am writing to apply for..."
+
+CRITICAL RULES - ABSOLUTELY NO VIOLATIONS:
+- ONLY reference experiences, skills, and achievements that appear in the resume
+- Do NOT exaggerate or inflate any accomplishments or metrics
+- Do NOT claim skills, experiences, or achievements not in the resume
+- Do NOT embellish the student's background or qualifications
+- Keep claims modest and accurate to what the resume shows
+- If the resume shows "contributed to" something, do NOT say "led" or "drove"
 
 Return only the cover letter text, ready to send.
 Use today's date: {today}

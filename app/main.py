@@ -501,14 +501,17 @@ def run_pipeline(
                 doc = documents.get(posting.posting_hash)
                 if doc:
                     safe_company = "".join(c for c in posting.company if c.isalnum() or c in ' -_')[:30]
-                    if doc.get('cover_letter'):
+                    safe_title = "".join(c for c in posting.title if c.isalnum() or c in ' -_')[:40]
+                    # Cover letter as text file
+                    if doc.get('cover_letter_text'):
                         attachments.append((
-                            f"CoverLetter_{safe_company}.pdf",
-                            doc['cover_letter']
+                            f"CoverLetter_{safe_company}_{safe_title}.txt",
+                            doc['cover_letter_text'].encode('utf-8')
                         ))
+                    # Tailored resume as PDF
                     if doc.get('resume'):
                         attachments.append((
-                            f"Resume_{safe_company}.pdf",
+                            f"Resume_{safe_company}_{safe_title}.pdf",
                             doc['resume']
                         ))
 
