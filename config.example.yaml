@@ -21,28 +21,78 @@ targets:
   ats_companies:
     # Greenhouse company slugs (from boards.greenhouse.io/{slug})
     greenhouse:
-      - google
+      # Big Tech & Fintech
       - stripe
-      - airbnb
-      - doordash
       - coinbase
-      - figma
-      - notion
-      - ramp
-      - plaid
       - robinhood
+      - brex
+      - notion
+      - figma
+      - scaleai
+      - andurilindustries
+      # Private Equity
+      - gtcr
+      - gcmgrosvenor
+      - stepstonegroup
+      - audaxgroup
+      - alpineinternships
+      - llrpartnersjobs
+      - sixthstreet
+      - bertramcapitalmanagement
+      - batteryvp
+      # Hedge Funds
+      - vikingglobalinvestors
+      - pharomanagement
+      - veritiongroup
+      - bracebridgecapital
+      - capstoneinvestmentadvisors
+      - kkr
+      - harrisassociates
+      # Venture Capital
+      - a16z
+      - baincapitalventures
+      - nfx
+      - antler
+      # YC Startups
+      - whatnot
+      - snackpasspt
+      - insurify
 
     # Lever company slugs (from jobs.lever.co/{slug})
     lever:
-      - netflix
-      - reddit
-      - pinterest
+      # Private Equity
+      - trinityhunt
+      - portagepointpartners
+      # Venture Capital
+      - indexventures
+      - bitwiseinvestments
+      # YC/VC Startups
+      - plaid
+      - tryjeeves
+      - cordtechnologies
+      - duffel
+      - superannotate
+      - instrumentl
+      - stackhawk
 
     # Ashby company slugs (from jobs.ashbyhq.com/{slug})
     ashby:
+      # AI Companies
       - openai
       - anthropic
-      - vercel
+      # Venture Capital
+      - firstround
+      - pear
+      - paradigm
+      - variant-fund
+      # YC/VC Startups
+      - ramp
+      - vanta
+      - junipersquare
+      - n8n
+      - rogo
+      - 9fin
+      - stainlessapi
 
 # Keywords for filtering
 keywords:
