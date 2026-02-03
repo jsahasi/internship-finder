@@ -162,6 +162,14 @@ exclusions:
     - third year
     - fourth year
     - junior/senior
+    # Graduate/PhD exclusions
+    - PhD
+    - Ph.D
+    - masters
+    - master's
+    - MS student
+    - graduate student
+    - grad student
 
 # Email delivery settings
 email:
