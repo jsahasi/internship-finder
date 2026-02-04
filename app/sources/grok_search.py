@@ -107,7 +107,7 @@ class GrokSearchProvider:
 
         try:
             response = self.client.chat.completions.create(
-                model="grok-2-latest",
+                model="grok-3",
                 max_tokens=4096,
                 messages=[
                     {
