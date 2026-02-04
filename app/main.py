@@ -564,10 +564,12 @@ def run_pipeline(
     included, near_misses = posting_filter.filter_batch(new_postings)
     logger.info(posting_filter.get_stats_summary())
 
-    # Phase 3b: Filter out already-emailed postings
-    if not force and included:
+    # Phase 3b: Filter out already-emailed postings (ALWAYS, even with --force)
+    if included:
+        pre_filter_count = len(included)
         included = state_store.filter_not_emailed(included)
-        logger.info(f"After filtering already-emailed: {len(included)} postings")
+        if pre_filter_count != len(included):
+            logger.info(f"Filtered out {pre_filter_count - len(included)} already-emailed, {len(included)} remaining")
 
     # Phase 3c: Validate positions are still open
     if included:
