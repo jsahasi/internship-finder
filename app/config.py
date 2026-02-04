@@ -175,6 +175,7 @@ class EnvSettings(BaseSettings):
     # LLM API Keys
     anthropic_api_key: Optional[str] = Field(default=None, alias="ANTHROPIC_API_KEY")
     openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
+    xai_api_key: Optional[str] = Field(default=None, alias="XAI_API_KEY")
 
     # Search API Keys (optional, Claude/OpenAI search is default)
     google_cse_api_key: Optional[str] = Field(default=None, alias="GOOGLE_CSE_API_KEY")

@@ -27,7 +27,9 @@ from app.sources.search_provider import (
     create_search_provider,
     build_internship_query
 )
+from app.sources.grok_search import GrokSearchProvider
 from app.storage.state import StateStore
+import requests
 
 
 def parse_args() -> argparse.Namespace:
@@ -194,7 +196,30 @@ def fetch_from_llm_search(
         except Exception as e:
             logger.warning(f"OpenAI search failed: {e}")
 
-    if not env.anthropic_api_key and not env.openai_api_key:
+    # Grok search
+    if env.xai_api_key:
+        logger.info("Searching with Grok...")
+        try:
+            grok_search = GrokSearchProvider(
+                api_key=env.xai_api_key,
+                max_results=config.search.max_results_per_query
+            )
+            grok_results = grok_search.search(
+                target_functions=target_functions,
+                underclass_terms=underclass_terms,
+                recency_days=config.search.recency_days
+            )
+            new_from_grok = 0
+            for posting in grok_results:
+                if posting.url not in seen_urls:
+                    seen_urls.add(posting.url)
+                    all_postings.append(posting)
+                    new_from_grok += 1
+            logger.info(f"Grok found {len(grok_results)} postings ({new_from_grok} new after dedup)")
+        except Exception as e:
+            logger.warning(f"Grok search failed: {e}")
+
+    if not env.anthropic_api_key and not env.openai_api_key and not env.xai_api_key:
         logger.warning("No LLM API keys configured for search")
 
     logger.info(f"LLM search complete: {len(all_postings)} unique postings")
@@ -291,6 +316,103 @@ def fetch_from_traditional_search(
 
     logger.info(f"Traditional search complete: {len(postings)} postings")
     return postings
+
+
+def validate_posting_still_open(posting: Posting, logger) -> bool:
+    """Check if a job posting is still open by verifying the page has an apply link.
+
+    Args:
+        posting: The posting to validate.
+        logger: Logger instance.
+
+    Returns:
+        True if posting appears to still be open, False otherwise.
+    """
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(posting.url, headers=headers, timeout=10, allow_redirects=True)
+
+        if response.status_code == 404:
+            logger.debug(f"Position closed (404): {posting.company} - {posting.title}")
+            return False
+
+        if response.status_code != 200:
+            # If we can't verify, assume it's open
+            logger.debug(f"Could not verify posting status ({response.status_code}): {posting.url}")
+            return True
+
+        content = response.text.lower()
+
+        # Check for common "position closed" indicators
+        closed_indicators = [
+            'this position has been filled',
+            'this job is no longer available',
+            'job no longer exists',
+            'position is closed',
+            'no longer accepting applications',
+            'this posting has expired',
+            'job has been removed',
+            'position has been closed',
+            'no longer open',
+        ]
+
+        for indicator in closed_indicators:
+            if indicator in content:
+                logger.debug(f"Position closed (indicator found): {posting.company} - {posting.title}")
+                return False
+
+        # Check for presence of apply button/link
+        apply_indicators = [
+            'apply now',
+            'apply for this job',
+            'submit application',
+            'apply to this position',
+            'apply for job',
+            'class="apply',
+            'id="apply',
+            'apply-button',
+            'btn-apply',
+        ]
+
+        has_apply = any(indicator in content for indicator in apply_indicators)
+        if not has_apply:
+            # Some ATS pages may not have obvious apply buttons, so don't reject
+            logger.debug(f"No apply button found, assuming open: {posting.company} - {posting.title}")
+            return True
+
+        return True
+
+    except requests.RequestException as e:
+        # If we can't reach the page, assume it's still open
+        logger.debug(f"Could not reach posting URL: {posting.url} - {e}")
+        return True
+
+
+def validate_postings_batch(postings: list[Posting], logger) -> list[Posting]:
+    """Validate a batch of postings are still open.
+
+    Args:
+        postings: List of postings to validate.
+        logger: Logger instance.
+
+    Returns:
+        List of postings that are still open.
+    """
+    valid_postings = []
+    closed_count = 0
+
+    for posting in postings:
+        if validate_posting_still_open(posting, logger):
+            valid_postings.append(posting)
+        else:
+            closed_count += 1
+
+    if closed_count > 0:
+        logger.info(f"Removed {closed_count} closed positions, {len(valid_postings)} still open")
+
+    return valid_postings
 
 
 def generate_application_documents(
@@ -441,6 +563,16 @@ def run_pipeline(
     logger.info("Phase 3: Applying filters")
     included, near_misses = posting_filter.filter_batch(new_postings)
     logger.info(posting_filter.get_stats_summary())
+
+    # Phase 3b: Filter out already-emailed postings
+    if not force and included:
+        included = state_store.filter_not_emailed(included)
+        logger.info(f"After filtering already-emailed: {len(included)} postings")
+
+    # Phase 3c: Validate positions are still open
+    if included:
+        logger.info("Phase 3c: Validating positions still open")
+        included = validate_postings_batch(included, logger)
 
     # Phase 4: LLM enrichment
     if (env.anthropic_api_key or env.openai_api_key) and included:

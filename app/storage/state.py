@@ -135,6 +135,45 @@ class StateStore:
         logger.info(f"Dedupe: {len(new_postings)} new, {seen_count} previously seen")
         return new_postings
 
+    def is_emailed(self, posting: Posting) -> bool:
+        """Check if a posting has already been emailed.
+
+        Args:
+            posting: Posting to check.
+
+        Returns:
+            True if already emailed.
+        """
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT emailed_at FROM postings_seen WHERE hash = ? AND emailed_at IS NOT NULL",
+                (posting.posting_hash,)
+            )
+            return cursor.fetchone() is not None
+
+    def filter_not_emailed(self, postings: list[Posting]) -> list[Posting]:
+        """Filter out postings that have already been emailed.
+
+        Args:
+            postings: List of postings to filter.
+
+        Returns:
+            List of postings not yet emailed.
+        """
+        not_emailed = []
+        already_emailed_count = 0
+
+        for posting in postings:
+            if self.is_emailed(posting):
+                already_emailed_count += 1
+            else:
+                not_emailed.append(posting)
+
+        if already_emailed_count > 0:
+            logger.info(f"Skipped {already_emailed_count} already-emailed postings")
+
+        return not_emailed
+
     def get_recent_postings(self, days: int = 7) -> list[dict]:
         """Get postings seen in the last N days.
 
