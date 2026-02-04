@@ -39,6 +39,7 @@ config.yaml
 *.db
 logs/
 data/
+cache/
 
 # Test artifacts
 .pytest_cache/

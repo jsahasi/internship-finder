@@ -28,6 +28,7 @@ from app.sources.search_provider import (
     build_internship_query
 )
 from app.sources.grok_search import GrokSearchProvider
+from app.sources.accelerators import AcceleratorScraper
 from app.storage.state import StateStore
 import requests
 
@@ -82,41 +83,77 @@ def parse_args() -> argparse.Namespace:
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
         help='Logging level'
     )
+    parser.add_argument(
+        '--discover_accelerators',
+        action='store_true',
+        help='Discover company job boards from accelerator portfolios (YC, etc.)'
+    )
+    parser.add_argument(
+        '--use_accelerators',
+        action='store_true',
+        help='Include discovered accelerator companies in the scan'
+    )
+    parser.add_argument(
+        '--max_discover',
+        type=int,
+        default=50,
+        help='Max new companies to discover from accelerators (default: 50)'
+    )
     return parser.parse_args()
 
 
 def fetch_from_ats(
     config: AppConfig,
-    logger
+    logger,
+    extra_boards: Optional[dict[str, list[str]]] = None
 ) -> list[Posting]:
-    """Fetch postings from configured ATS companies."""
+    """Fetch postings from configured ATS companies.
+
+    Args:
+        config: Application config
+        logger: Logger instance
+        extra_boards: Optional dict with extra boards to fetch from accelerators
+                      Format: {'greenhouse': [...], 'lever': [...], 'ashby': [...]}
+    """
     postings = []
     ats_config = config.targets.ats_companies
 
-    if ats_config.greenhouse:
-        logger.info(f"Fetching from {len(ats_config.greenhouse)} Greenhouse boards")
+    # Merge extra boards from accelerators if provided
+    greenhouse_boards = list(ats_config.greenhouse) if ats_config.greenhouse else []
+    lever_boards = list(ats_config.lever) if ats_config.lever else []
+    ashby_boards = list(ats_config.ashby) if ats_config.ashby else []
+
+    if extra_boards:
+        greenhouse_boards = list(set(greenhouse_boards + extra_boards.get('greenhouse', [])))
+        lever_boards = list(set(lever_boards + extra_boards.get('lever', [])))
+        ashby_boards = list(set(ashby_boards + extra_boards.get('ashby', [])))
+        logger.info(f"Including accelerator boards: +{len(extra_boards.get('greenhouse', []))} GH, "
+                   f"+{len(extra_boards.get('lever', []))} Lever, +{len(extra_boards.get('ashby', []))} Ashby")
+
+    if greenhouse_boards:
+        logger.info(f"Fetching from {len(greenhouse_boards)} Greenhouse boards")
         gh_adapter = GreenhouseAdapter()
-        for company in ats_config.greenhouse:
+        for company in greenhouse_boards:
             try:
                 jobs = gh_adapter.fetch_jobs(company)
                 postings.extend(jobs)
             except Exception as e:
                 logger.warning(f"Greenhouse '{company}' failed: {e}")
 
-    if ats_config.lever:
-        logger.info(f"Fetching from {len(ats_config.lever)} Lever boards")
+    if lever_boards:
+        logger.info(f"Fetching from {len(lever_boards)} Lever boards")
         lever_adapter = LeverAdapter()
-        for company in ats_config.lever:
+        for company in lever_boards:
             try:
                 jobs = lever_adapter.fetch_jobs(company)
                 postings.extend(jobs)
             except Exception as e:
                 logger.warning(f"Lever '{company}' failed: {e}")
 
-    if ats_config.ashby:
-        logger.info(f"Fetching from {len(ats_config.ashby)} Ashby boards")
+    if ashby_boards:
+        logger.info(f"Fetching from {len(ashby_boards)} Ashby boards")
         ashby_adapter = AshbyAdapter()
-        for company in ats_config.ashby:
+        for company in ashby_boards:
             try:
                 jobs = ashby_adapter.fetch_jobs(company)
                 postings.extend(jobs)
@@ -547,7 +584,8 @@ def run_pipeline(
     dry_run: bool = False,
     force: bool = False,
     max_results: Optional[int] = None,
-    generate_docs: bool = True
+    generate_docs: bool = True,
+    accelerator_boards: Optional[dict[str, list[str]]] = None
 ) -> int:
     """Run the main processing pipeline."""
     logger = get_logger()
@@ -581,8 +619,8 @@ def run_pipeline(
     logger.info("Phase 1: Fetching postings")
     all_postings = []
 
-    # Fetch from ATS
-    ats_postings = fetch_from_ats(config, logger)
+    # Fetch from ATS (including accelerator companies if provided)
+    ats_postings = fetch_from_ats(config, logger, extra_boards=accelerator_boards)
     all_postings.extend(ats_postings)
 
     # Fetch from LLM search (Claude and/or OpenAI)
@@ -784,6 +822,69 @@ def main() -> int:
     # Load environment settings
     env = get_env_settings()
 
+    # Handle accelerator discovery mode
+    if args.discover_accelerators:
+        logger.info("=" * 60)
+        logger.info("Accelerator Discovery Mode")
+        logger.info("=" * 60)
+
+        scraper = AcceleratorScraper()
+
+        # Fetch YC companies
+        logger.info("Fetching Y Combinator company list...")
+        yc_companies = scraper.fetch_yc_companies()
+        logger.info(f"Found {len(yc_companies)} active YC companies")
+
+        # Load existing verified boards
+        verified = scraper.get_verified_boards('yc')
+        existing = sum(len(v) for v in verified.values())
+        logger.info(f"Already verified: {existing} company boards")
+
+        # Find unverified companies
+        verified_slugs = set(verified['greenhouse'] + verified['lever'] + verified['ashby'])
+        unverified = [c for c in yc_companies if c.slug not in verified_slugs]
+        logger.info(f"Unverified companies: {len(unverified)}")
+
+        # Discover ATS boards for new companies
+        if unverified:
+            to_check = min(len(unverified), args.max_discover)
+            logger.info(f"Checking {to_check} companies for job boards...")
+            new_boards = scraper.discover_ats_boards(unverified[:to_check], max_companies=to_check)
+
+            # Merge with existing
+            for platform in ['greenhouse', 'lever', 'ashby']:
+                verified[platform] = list(set(verified[platform] + new_boards[platform]))
+
+            # Save updated verified boards
+            scraper.save_verified_boards(verified, 'yc')
+
+            new_count = sum(len(v) for v in new_boards.values())
+            logger.info(f"Discovered {new_count} new company boards")
+
+        # Print summary
+        print("\n" + "=" * 60)
+        print("ACCELERATOR DISCOVERY RESULTS")
+        print("=" * 60)
+        print(f"Total verified boards:")
+        print(f"  Greenhouse: {len(verified['greenhouse'])}")
+        print(f"  Lever: {len(verified['lever'])}")
+        print(f"  Ashby: {len(verified['ashby'])}")
+        print(f"\nBoards cached in: cache/verified_boards_yc.json")
+        print(f"Run with --use_accelerators to include these in scans")
+
+        return 0
+
+    # Load accelerator boards if requested
+    accelerator_boards = None
+    if args.use_accelerators:
+        scraper = AcceleratorScraper()
+        accelerator_boards = scraper.get_verified_boards('yc')
+        total = sum(len(v) for v in accelerator_boards.values())
+        if total > 0:
+            logger.info(f"Using {total} accelerator company boards")
+        else:
+            logger.warning("No verified accelerator boards found. Run --discover_accelerators first.")
+
     # Run pipeline
     try:
         return run_pipeline(
@@ -793,7 +894,8 @@ def main() -> int:
             dry_run=args.dry_run,
             force=args.force,
             max_results=args.max_results,
-            generate_docs=not args.no_documents
+            generate_docs=not args.no_documents,
+            accelerator_boards=accelerator_boards
         )
     except KeyboardInterrupt:
         logger.info("Interrupted by user")
