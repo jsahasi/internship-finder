@@ -604,8 +604,8 @@ def run_pipeline(
 
     print("\n" + text_report)
 
-    # Phase 7: Send email
-    if not dry_run and config.recipients:
+    # Phase 7: Send email (only if there are matching internships)
+    if not dry_run and config.recipients and included:
         logger.info("Phase 7: Sending email")
 
         try:
@@ -671,6 +671,8 @@ def run_pipeline(
 
     elif dry_run:
         logger.info("Phase 7: Skipping email (dry run)")
+    elif not included:
+        logger.info("Phase 7: Skipping email (no matching internships)")
     else:
         logger.info("Phase 7: Skipping email (no recipients configured)")
 

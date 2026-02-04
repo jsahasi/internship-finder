@@ -4,13 +4,16 @@ A production-grade Python application that finds internship opportunities specif
 
 ## Features
 
-- **Multi-LLM Search**: Uses Claude and/or OpenAI to intelligently search for internships
-- **Smart Filtering**: Excludes postings for juniors/seniors based on your graduation year
+- **Triple-LLM Search**: Uses Claude, OpenAI, and Grok (X.AI) for maximum coverage
+- **Smart Filtering**: Excludes postings for juniors/seniors, MS/PhD based on your profile
+- **URL Validation**: Verifies positions are still open before including them
 - **Personalized Profile**: Configure your year, target roles, skills, and preferences
-- **Auto-Generated Documents**: Creates tailored resumes and cover letters for each match
+- **Auto-Generated Documents**: Creates tailored resumes (PDF) and cover letters (TXT)
+- **Anti-Fabrication**: Strict rules prevent LLMs from exaggerating or inventing content
 - **Multi-Source Discovery**: Fetches from Greenhouse, Lever, Ashby ATS platforms
-- **Email Digest**: Sends results with PDF attachments via SendGrid or SMTP
-- **Deduplication**: SQLite-based state to avoid duplicate notifications
+- **Email Digest**: Sends results with attachments (only when matches found)
+- **Deduplication**: SQLite-based state prevents duplicate emails
+- **Source Tracking**: "Sourced By" column shows which LLM found each posting
 
 ## Quick Start
 
@@ -69,16 +72,17 @@ cp .env.example .env
 Add your API keys:
 
 ```bash
-# Required: At least one LLM key
-ANTHROPIC_API_KEY=sk-ant-...
-OPENAI_API_KEY=sk-...  # Optional, for broader search
+# LLM Search Providers (at least one required)
+ANTHROPIC_API_KEY=sk-ant-...    # Claude - primary search
+OPENAI_API_KEY=sk-...           # GPT-4o - additional coverage
+XAI_API_KEY=xai-...             # Grok - real-time web search
 
 # Email (choose one)
 SENDGRID_API_KEY=SG...
 # OR
 SMTP_HOST=smtp.gmail.com
 SMTP_USER=you@gmail.com
-SMTP_PASSWORD=app_password
+SMTP_PASSWORD=app_password      # Use Gmail App Password
 ```
 
 ### 5. Run
@@ -149,10 +153,15 @@ functions:
 ### `.env` - API Keys
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...     # Required for Claude
-OPENAI_API_KEY=sk-...            # Optional, enables dual-LLM search
+ANTHROPIC_API_KEY=sk-ant-...     # Claude search & document generation
+OPENAI_API_KEY=sk-...            # Optional, GPT-4o search
+XAI_API_KEY=xai-...              # Optional, Grok search
 SENDGRID_API_KEY=SG...           # Or use SMTP_* variables
 ```
+
+### `CLAUDE.md` - Development Lessons
+
+Contains lessons learned during development to prevent repeating mistakes. Updated automatically after runs.
 
 ## How It Works
 
@@ -163,12 +172,20 @@ SENDGRID_API_KEY=SG...           # Or use SMTP_* variables
 5. **Document Generation**: Creates tailored resume and cover letter for each match
 6. **Email Delivery**: Sends digest with PDF attachments
 
-## Multi-LLM Search
+## Triple-LLM Search
 
-When both `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are set:
-- Both Claude and GPT-4 search for internships
-- Results are deduplicated by URL
-- Broader coverage of job postings
+Configure any combination of API keys for broader coverage:
+
+| Provider | API Key | Strengths |
+|----------|---------|-----------|
+| Claude (Anthropic) | `ANTHROPIC_API_KEY` | Web search, accurate parsing |
+| GPT-4o (OpenAI) | `OPENAI_API_KEY` | General search capabilities |
+| Grok (X.AI) | `XAI_API_KEY` | Real-time web access |
+
+- All providers search simultaneously when keys are configured
+- Results are automatically deduplicated by URL
+- "Sourced By" column shows which LLM found each posting
+- More providers = better coverage of job postings
 
 ## CLI Options
 
@@ -205,6 +222,7 @@ internship-finder/
 │   ├── sources/                 # Job fetchers
 │   │   ├── claude_search.py     # Claude-powered search
 │   │   ├── openai_search.py     # OpenAI-powered search
+│   │   ├── grok_search.py       # Grok (X.AI) search
 │   │   ├── greenhouse.py        # Greenhouse ATS
 │   │   ├── lever.py             # Lever ATS
 │   │   └── ashby.py             # Ashby ATS
