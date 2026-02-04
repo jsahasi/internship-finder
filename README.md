@@ -5,6 +5,7 @@ A production-grade Python application that finds internship opportunities specif
 ## Features
 
 - **Triple-LLM Search**: Uses Claude, OpenAI, and Grok (X.AI) for maximum coverage
+- **Accelerator Discovery**: Auto-discovers job boards from YC portfolio (5,600+ companies)
 - **Smart Filtering**: Excludes postings for juniors/seniors, MS/PhD based on your profile
 - **URL Validation**: Verifies positions are still open before including them
 - **Personalized Profile**: Configure your year, target roles, skills, and preferences
@@ -187,6 +188,26 @@ Configure any combination of API keys for broader coverage:
 - "Sourced By" column shows which LLM found each posting
 - More providers = better coverage of job postings
 
+## Accelerator Discovery
+
+Automatically discover job boards from startup accelerator portfolios:
+
+```bash
+# Discover company job boards from YC portfolio
+python -m app.main --discover_accelerators --max_discover 100
+
+# Use discovered boards in your scan
+python -m app.main --use_accelerators --dry_run
+```
+
+The discovery process:
+1. Fetches the Y Combinator company list (5,600+ active companies)
+2. Tests each company for Greenhouse, Lever, or Ashby job boards
+3. Caches verified boards in `cache/verified_boards_yc.json`
+4. Run periodically to discover new companies
+
+Found companies include: Stripe, Airbnb, Gusto, Amplitude, HackerRank, and many more.
+
 ## CLI Options
 
 | Flag | Description |
@@ -198,6 +219,9 @@ Configure any combination of API keys for broader coverage:
 | `--force` | Ignore deduplication, reprocess all |
 | `--max_results N` | Limit postings to process |
 | `--log_level LEVEL` | DEBUG, INFO, WARNING, ERROR |
+| `--discover_accelerators` | Discover job boards from YC portfolio |
+| `--use_accelerators` | Include discovered accelerator boards in scan |
+| `--max_discover N` | Max companies to check during discovery (default: 50) |
 
 ## Email Output
 
@@ -223,6 +247,7 @@ internship-finder/
 │   │   ├── claude_search.py     # Claude-powered search
 │   │   ├── openai_search.py     # OpenAI-powered search
 │   │   ├── grok_search.py       # Grok (X.AI) search
+│   │   ├── accelerators.py      # YC portfolio scraper
 │   │   ├── greenhouse.py        # Greenhouse ATS
 │   │   ├── lever.py             # Lever ATS
 │   │   └── ashby.py             # Ashby ATS
