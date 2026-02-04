@@ -34,6 +34,9 @@ class Posting(BaseModel):
     raw_snippet: str = Field(default="")
     retrieved_at: datetime = Field(default_factory=datetime.utcnow)
 
+    # Search provider that found this posting
+    search_provider: Optional[str] = None  # "Claude", "OpenAI", "Grok", "ATS"
+
     # LLM-enriched fields (populated after classification)
     underclass_evidence: Optional[str] = None
     why_fits: Optional[str] = None
@@ -65,6 +68,7 @@ class Posting(BaseModel):
             "Function": self.function_family,
             "Location": self.location,
             "Posted": self.posted_at.strftime("%Y-%m-%d") if self.posted_at else "Unknown",
+            "Sourced By": self.search_provider or "ATS",
             "Evidence": self.underclass_evidence or "",
             "Why Fits": self.why_fits or "",
             "URL": self.url

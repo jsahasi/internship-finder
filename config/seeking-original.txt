@@ -4,11 +4,11 @@
 ## Current Year in College
 # Options: freshman, sophomore, junior, senior
 # This helps filter for programs matching your class year
-year: Sophomore
+year: freshman
 
 ## Target Graduation Year
 # Your expected graduation year (e.g., 2028, 2029)
-graduation_year: 2028
+graduation_year: 2029
 
 ## Target Roles
 # List the types of roles you're interested in (one per line)
@@ -23,9 +23,9 @@ roles:
 # List industries you're interested in (one per line)
 # Examples: tech, finance, consulting, healthcare, e-commerce
 industries:
-- tech - AI, space, software, sartups, all
+- tech
 - fintech
-- consulting
+- finance
 
 ## Location Preferences
 # List preferred locations or "remote" (one per line)
@@ -42,7 +42,7 @@ skills:
 - React
 - SQL
 - Data Analysis
-- technical strategy consulting clubs and projects
+- consulting clubs and projects
 
 ## Additional Criteria
 # Any other requirements or preferences in plain English
@@ -54,5 +54,5 @@ additional_criteria: |
 ## About Me (for cover letters)
 # A brief description of yourself and what you're looking for
 about_me: |
-  I'm a passionate computer science and business student eager to apply my skills
-  in a real-world environment. I’m interested in how software works behind the scenes, including things like performance, data flow, and the tradeoffs that show up as systems scale. I also enjoy building things end-to-end and thinking through how technical choices affect the final product. Feel free to reach out: vsahasi@berkeley.edu
+  I'm a passionate computer science and business/ economics student eager to apply my skills
+  in a real-world environment. 

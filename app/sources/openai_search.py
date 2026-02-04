@@ -170,7 +170,8 @@ class OpenAISearchProvider:
                     posted_at=posted_at,
                     text=item.get('description', ''),
                     raw_snippet=item.get('description', '')[:500],
-                    underclass_evidence=item.get('underclass_evidence')
+                    underclass_evidence=item.get('underclass_evidence'),
+                    search_provider="OpenAI"
                 )
                 postings.append(posting)
 

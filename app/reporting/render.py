@@ -117,6 +117,7 @@ EMAIL_TEMPLATE = """
                 <th>Function</th>
                 <th>Location</th>
                 <th>Posted</th>
+                <th>Sourced By</th>
                 <th>Why It Fits</th>
                 <th>Link</th>
             </tr>
@@ -129,6 +130,7 @@ EMAIL_TEMPLATE = """
                 <td>{{ p.function_family }}</td>
                 <td>{{ p.location }}</td>
                 <td>{{ p.posted }}</td>
+                <td>{{ p.sourced_by }}</td>
                 <td>
                     {% if p.evidence %}
                     <span class="evidence">{{ p.evidence }}</span><br>
@@ -222,6 +224,7 @@ class ReportRenderer:
                 'function_family': p.function_family,
                 'location': p.location,
                 'posted': p.posted_at.strftime('%Y-%m-%d') if p.posted_at else 'Unknown',
+                'sourced_by': p.search_provider or 'ATS',
                 'evidence': p.underclass_evidence or '',
                 'why_fits': p.why_fits or '',
                 'bullets': p.summary_bullets[:3] if p.summary_bullets else [],
@@ -280,6 +283,7 @@ class ReportRenderer:
                     f"  Function: {p.function_family}",
                     f"  Location: {p.location}",
                     f"  Posted: {p.posted_at.strftime('%Y-%m-%d') if p.posted_at else 'Unknown'}",
+                    f"  Sourced By: {p.search_provider or 'ATS'}",
                     f"  Evidence: {p.underclass_evidence or 'N/A'}",
                     f"  URL: {p.url}"
                 ])

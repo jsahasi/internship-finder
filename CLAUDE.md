@@ -15,6 +15,12 @@ This document captures lessons learned while developing and maintaining the inte
 - Must filter by `emailed_at IS NULL` to avoid re-sending the same postings
 - A posting can be "seen" (for dedup) but not yet "emailed" (if run was dry-run)
 
+### Always Filter Already-Emailed (Even with --force)
+- The `--force` flag should only skip "seen" deduplication
+- Already-emailed postings must ALWAYS be filtered out
+- Users should never receive duplicate emails for the same posting
+- Bug fixed: Previously `--force` bypassed both filters, causing repeated emails
+
 ## URL and Position Validation
 
 ### Always Validate Positions Are Still Open
