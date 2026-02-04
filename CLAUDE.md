@@ -127,6 +127,36 @@ This document captures lessons learned while developing and maintaining the inte
 - Always enable all available providers for best coverage
 - Results are automatically deduplicated by URL
 
+## Accelerator Discovery
+
+### Use Official APIs When Available
+- Y Combinator has a community API at `yc-oss.github.io/api/companies/all.json`
+- This is updated daily and contains 5,600+ companies
+- Much more reliable than scraping the YC website directly
+- Cache the company list locally to avoid repeated API calls
+
+### ATS Platform Detection Has Pitfalls
+- Greenhouse and Lever APIs are reliable - they return job counts
+- Ashby detection is tricky - many false positives from HTML pages
+- Always verify by checking if actual jobs exist, not just if page loads
+- Use the ATS APIs directly (`boards-api.greenhouse.io`, `api.lever.co`) instead of scraping
+
+### Discovery Is Slow But Worth It
+- Checking 500 companies takes ~45 minutes due to rate limiting
+- Each company must be tested against 3 ATS platforms
+- Run discovery periodically (weekly) to find new companies
+- Cache results in `cache/verified_boards_yc.json` for reuse
+
+### Big YC Companies Found
+- Major companies with Greenhouse boards: Stripe, Airbnb, Dropbox, Reddit, Twitch, Instacart, Coinbase, Gusto, Figma
+- These are valuable sources even if they don't have underclass programs now
+- Companies add/remove internship programs seasonally
+
+### Ashby False Positives
+- Ashby pages often return 200 status even without job data
+- The improved API check (`api.ashbyhq.com/posting-api/job-board/{slug}`) is more reliable
+- Still some false positives - the scanner handles this gracefully by logging "No job data found"
+
 ## Code Quality
 
 ### Avoid Over-Engineering
