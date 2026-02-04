@@ -31,6 +31,17 @@ This document captures lessons learned while developing and maintaining the inte
   3. Verifying presence of an apply button/link
 - Better to skip a valid position than include a closed one
 
+### LLMs Fabricate URLs
+- LLM search providers (Claude, OpenAI, Grok) often return fabricated/hallucinated URLs
+- These URLs look valid but redirect to generic careers pages
+- Example: `boards.greenhouse.io/datadog/jobs/6153233002` → `careers.datadoghq.com/`
+- Detection strategies:
+  1. Check if URL redirects to a different host
+  2. Check if final URL path loses the job ID (e.g., `/jobs/12345` → `/positions/`)
+  3. Look for generic listing page indicators (job counts, filters)
+- URLs from direct ATS API fetches are reliable; LLM-found URLs need extra validation
+- Always validate LLM-sourced URLs before including in emails
+
 ## Document Generation
 
 ### Anti-Fabrication Rules Are Critical

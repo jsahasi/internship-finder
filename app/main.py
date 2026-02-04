@@ -319,7 +319,12 @@ def fetch_from_traditional_search(
 
 
 def validate_posting_still_open(posting: Posting, logger) -> bool:
-    """Check if a job posting is still open by verifying the page has an apply link.
+    """Check if a job posting is still open by verifying it's a real job page.
+
+    Validates:
+    1. URL doesn't redirect to a generic careers page
+    2. Page doesn't show "position closed" indicators
+    3. Page contains job-specific content
 
     Args:
         posting: The posting to validate.
@@ -328,6 +333,8 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
     Returns:
         True if posting appears to still be open, False otherwise.
     """
+    from urllib.parse import urlparse
+
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -342,6 +349,44 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
             # If we can't verify, assume it's open
             logger.debug(f"Could not verify posting status ({response.status_code}): {posting.url}")
             return True
+
+        # Check for redirect to generic careers page
+        original_url = urlparse(posting.url)
+        final_url = urlparse(response.url)
+
+        # Detect if redirected to a different host (likely generic careers site)
+        if original_url.netloc != final_url.netloc:
+            # Check if final URL is a generic page (no job ID in path)
+            generic_path_patterns = [
+                '/positions',
+                '/positions/',
+                '/careers',
+                '/careers/',
+                '/jobs',
+                '/jobs/',
+                '/open-positions',
+                '/opportunities',
+            ]
+            final_path_lower = final_url.path.lower().rstrip('/')
+
+            # If redirected to root or generic listing page, it's invalid
+            if final_path_lower in ['', '/'] or any(final_path_lower == p.rstrip('/') for p in generic_path_patterns):
+                logger.debug(f"Invalid URL (redirected to generic page {response.url}): {posting.company} - {posting.title}")
+                return False
+
+        # Even same host - check if path lost the job ID
+        original_path = original_url.path.lower()
+        final_path = final_url.path.lower()
+
+        # If original had a job ID pattern but final doesn't, it's likely invalid
+        import re
+        job_id_pattern = r'/jobs?/\d+|/positions?/[a-f0-9-]+|/job/[a-z0-9-]+|/\d{5,}'
+        had_job_id = re.search(job_id_pattern, original_path)
+        has_job_id = re.search(job_id_pattern, final_path)
+
+        if had_job_id and not has_job_id:
+            logger.debug(f"Invalid URL (job ID lost after redirect): {posting.company} - {posting.title}")
+            return False
 
         content = response.text.lower()
 
@@ -362,6 +407,24 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
             if indicator in content:
                 logger.debug(f"Position closed (indicator found): {posting.company} - {posting.title}")
                 return False
+
+        # Check for generic listing pages (many jobs listed, not a single job)
+        listing_page_indicators = [
+            'class="job-listing"',
+            'class="jobs-list"',
+            'class="position-list"',
+            'data-job-count=',
+            'showing all jobs',
+            'browse all positions',
+            'all open positions',
+            'filter by location',
+            'filter by department',
+        ]
+
+        listing_indicator_count = sum(1 for ind in listing_page_indicators if ind in content)
+        if listing_indicator_count >= 2:
+            logger.debug(f"Invalid URL (appears to be job listing page): {posting.company} - {posting.title}")
+            return False
 
         # Check for presence of apply button/link
         apply_indicators = [
