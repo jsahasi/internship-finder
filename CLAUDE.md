@@ -79,6 +79,37 @@ This document captures lessons learned while developing and maintaining the inte
 - Tasks run in the user's timezone by default
 - Use `-StartWhenAvailable` to run missed tasks when computer wakes up
 
+## LLM Provider Management
+
+### Model Names Change Frequently
+- LLM providers deprecate models regularly (e.g., `grok-beta` → `grok-3`)
+- Always check for the latest model name when a provider fails
+- Error messages usually indicate the correct model to use
+- Consider making model names configurable in .env or config.yaml
+
+### Test Providers Individually
+- Before running full scans, test each search provider in isolation
+- Use a simple Python snippet to verify API connectivity:
+  ```python
+  from app.sources.grok_search import GrokSearchProvider
+  grok = GrokSearchProvider(api_key='...')
+  results = grok.search(['SWE'], ['freshman'], recency_days=7)
+  ```
+- This catches auth issues and model deprecations quickly
+
+### Rate Limits Are Real
+- Claude has strict rate limits (30,000 tokens/minute on some tiers)
+- Multiple consecutive runs will hit rate limits
+- The scanner already has retry logic, but back-to-back runs will fail
+- For testing, use `--no_documents` to reduce token usage
+- Wait at least 1-2 minutes between full runs
+
+### Multiple Providers Increase Coverage
+- Different LLMs find different results
+- Claude found 1 posting, Grok found 3 additional ones
+- Always enable all available providers for best coverage
+- Results are automatically deduplicated by URL
+
 ## Code Quality
 
 ### Avoid Over-Engineering
