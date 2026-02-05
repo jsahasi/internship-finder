@@ -157,6 +157,19 @@ This document captures lessons learned while developing and maintaining the inte
 - The improved API check (`api.ashbyhq.com/posting-api/job-board/{slug}`) is more reliable
 - Still some false positives - the scanner handles this gracefully by logging "No job data found"
 
+### Diminishing Returns After ~1000 Companies
+- After checking ~1000 YC companies, most major companies with job boards are found
+- Found 47 boards total: 29 Greenhouse, 3 Lever, 15 Ashby
+- Further discovery yields very few new boards (3 per 500 companies checked)
+- The YC list has 5,600+ companies but most are small startups without public job boards
+- Weekly discovery runs are sufficient to catch new companies
+
+### Job Count Impact
+- 47 accelerator boards added ~1,000 new job postings to each scan
+- Major contributors: Airbnb (248), Dropbox (162), Instacart (159), Reddit (151), Fivetran (146)
+- Even without underclass programs now, these companies may add them seasonally
+- The infrastructure is in place to catch them when they do
+
 ## Code Quality
 
 ### Avoid Over-Engineering
