@@ -194,6 +194,31 @@ This document captures lessons learned while developing and maintaining the inte
 - The `target_companies` list in config.yaml (278 companies) is passed to LLM search prompts in batches of 100
 - Companies are organized by category: Dow 30, Fortune 500, Nasdaq 100, VCs, IBs, hedge funds, PE firms, YC/accelerator companies
 
+## Workday ATS Integration
+
+### Workday CXS API
+- Workday's career sites use a CXS API at `POST https://{tenant}.{instance}.myworkdayjobs.com/wday/cxs/{tenant}/{portal}/jobs`
+- Each company needs 3 fields: `tenant`, `instance` (wd1-wd5, wd12), `portal` (career site name)
+- Page size MUST be 20 or less — larger values (e.g., 200) return HTTP 400
+- Workday blocks bot User-Agent strings — must use a browser-like UA string
+- `externalPath` from the API already includes `/job/` prefix — don't double it in URL construction
+- Date strings use relative format: "Posted Today", "Posted Yesterday", "Posted N Days Ago", "Posted 30+ Days Ago"
+
+### Verified Workday Boards (Feb 2026)
+- **Big Tech**: nvidia.wd5, salesforce.wd12, adobe.wd5, netflix.wd1, cisco.wd5, intel.wd1, broadcom.wd1, snapchat.wd1, crowdstrike.wd5, paypal.wd1
+- **Entertainment/Consumer**: disney.wd5, walmart.wd5, chevron.wd5
+- **Finance**: ms.wd5 (Morgan Stanley), spgi.wd5 (S&P Global), nasdaq.wd1, dowjones.wd1, mtb.wd5, lplfinancial.wd1
+- **Defense**: boeing.wd1 (INTERN portal only), ngc.wd1 (Northrop Grumman)
+- 21 boards total, ~14,000+ jobs across all boards
+- Many major finance firms (Goldman Sachs, JPMorgan, Citi, Wells Fargo) do NOT use myworkdayjobs.com
+- Wells Fargo uses myworkdaysite.com (different platform, different API)
+
+### Discovering New Workday Boards
+- Search `"myworkdayjobs.com" {company} careers` to find the URL
+- Extract tenant, instance, and portal from the URL pattern
+- Verify with CXS API POST before adding to config
+- Brute-force discovery is slow (5 instances x N companies) — web search is more efficient
+
 ## Code Quality
 
 ### Avoid Over-Engineering

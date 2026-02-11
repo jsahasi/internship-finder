@@ -94,6 +94,77 @@ targets:
       - 9fin
       - stainlessapi
 
+    # Workday career sites (tenant.instance.myworkdayjobs.com/portal)
+    # Each entry needs: tenant, instance (wd1-wd5), portal
+    workday:
+      # Big Tech
+      - tenant: nvidia
+        instance: wd5
+        portal: NVIDIAExternalCareerSite
+      - tenant: salesforce
+        instance: wd12
+        portal: External_Career_Site
+      - tenant: adobe
+        instance: wd5
+        portal: external_experienced
+      - tenant: netflix
+        instance: wd1
+        portal: Netflix
+      - tenant: cisco
+        instance: wd5
+        portal: Cisco_Careers
+      - tenant: intel
+        instance: wd1
+        portal: External
+      - tenant: broadcom
+        instance: wd1
+        portal: External_Career
+      - tenant: snapchat
+        instance: wd1
+        portal: snap
+      - tenant: crowdstrike
+        instance: wd5
+        portal: crowdstrikecareers
+      - tenant: paypal
+        instance: wd1
+        portal: Jobs
+      # Entertainment / Consumer
+      - tenant: disney
+        instance: wd5
+        portal: disneycareer
+      - tenant: walmart
+        instance: wd5
+        portal: WalmartExternal
+      - tenant: chevron
+        instance: wd5
+        portal: jobs
+      # Finance
+      - tenant: ms
+        instance: wd5
+        portal: External
+      - tenant: spgi
+        instance: wd5
+        portal: SPGI_Careers
+      - tenant: nasdaq
+        instance: wd1
+        portal: Global_External_Site
+      - tenant: dowjones
+        instance: wd1
+        portal: Dow_Jones_Career
+      - tenant: mtb
+        instance: wd5
+        portal: Campus
+      - tenant: lplfinancial
+        instance: wd1
+        portal: University
+      # Defense / Aerospace
+      - tenant: boeing
+        instance: wd1
+        portal: INTERN
+      - tenant: ngc
+        instance: wd1
+        portal: Northrop_Grumman_External_Site
+
 # Keywords for filtering
 keywords:
   # Terms indicating underclass-targeted positions

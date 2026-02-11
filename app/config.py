@@ -21,11 +21,19 @@ class SearchConfig(BaseModel):
     require_underclass_terms: bool = Field(default=False, description="Require explicit underclass terms (freshman/sophomore). If false, includes any internship not explicitly for upperclassmen.")
 
 
+class WorkdayCompany(BaseModel):
+    """A single Workday career-site entry."""
+    tenant: str
+    instance: str = "wd5"
+    portal: str
+
+
 class ATSCompanies(BaseModel):
     """Target companies by ATS platform."""
     greenhouse: list[str] = Field(default_factory=list)
     lever: list[str] = Field(default_factory=list)
     ashby: list[str] = Field(default_factory=list)
+    workday: list[WorkdayCompany] = Field(default_factory=list)
 
 
 class TargetsConfig(BaseModel):

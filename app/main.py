@@ -22,6 +22,7 @@ from app.sources.ashby import AshbyAdapter
 from app.sources.generic_html import GenericHTMLParser
 from app.sources.greenhouse import GreenhouseAdapter
 from app.sources.lever import LeverAdapter
+from app.sources.workday import WorkdayAdapter
 from app.sources.claude_search import ClaudeSearchProvider
 from app.sources.search_provider import (
     create_search_provider,
@@ -160,6 +161,18 @@ def fetch_from_ats(
                 postings.extend(jobs)
             except Exception as e:
                 logger.warning(f"Ashby '{company}' failed: {e}")
+
+    # Workday boards
+    workday_boards = list(ats_config.workday) if ats_config.workday else []
+    if workday_boards:
+        logger.info(f"Fetching from {len(workday_boards)} Workday boards")
+        wd_adapter = WorkdayAdapter()
+        for company in workday_boards:
+            try:
+                jobs = wd_adapter.fetch_jobs(company.tenant, company.instance, company.portal)
+                postings.extend(jobs)
+            except Exception as e:
+                logger.warning(f"Workday '{company.tenant}' failed: {e}")
 
     logger.info(f"ATS fetch complete: {len(postings)} total postings")
     return postings
@@ -753,6 +766,13 @@ def run_pipeline(
             logger.warning(f"LLM enrichment failed: {e}")
     else:
         logger.info("Phase 4: Skipping LLM (no API key)")
+
+    # Sort: Summer 2026 postings first, then by most recent
+    if included:
+        included.sort(key=lambda p: (
+            -int("summer 2026" in p.title.lower()),
+            -(p.posted_at.timestamp() if p.posted_at else 0),
+        ))
 
     # Phase 5: Generate application documents
     documents = {}
