@@ -118,23 +118,33 @@ class ClaudeSearchProvider:
         terms_str = ", ".join(underclass_terms[:5])
 
         if companies:
-            companies_str = ", ".join(companies[:10])
-            search_query = f"underclass internship ({terms_str}) ({functions_str}) at ({companies_str}) site:greenhouse.io OR site:lever.co OR site:ashbyhq.com"
+            # Use first few in the search query, full list in the prompt
+            query_companies = ", ".join(companies[:10])
+            search_query = f"underclass internship ({terms_str}) ({functions_str}) at ({query_companies}) site:greenhouse.io OR site:lever.co OR site:ashbyhq.com"
+            companies_context = "\n".join(f"- {c}" for c in companies)
+            companies_instruction = f"""
+
+PRIORITY COMPANIES TO SEARCH (check all of these for underclass internship programs):
+{companies_context}
+
+Search for internship programs at these specific companies. Do multiple searches if needed to cover them all."""
         else:
             search_query = f"underclass internship 2026 ({terms_str}) ({functions_str}) site:greenhouse.io OR site:lever.co OR site:ashbyhq.com"
+            companies_instruction = ""
 
-        logger.info(f"Claude searching: {search_query[:80]}...")
+        logger.info(f"Claude searching: {search_query[:80]}... ({len(companies) if companies else 0} target companies)")
 
         try:
-            # Use Claude with web search tool
+            # Use Claude with web search tool - more searches for larger company lists
+            max_searches = min(5 + (len(companies) // 20 if companies else 0), 10)
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=4096,
+                max_tokens=8192,
                 system=SEARCH_SYSTEM_PROMPT,
                 tools=[{
                     "type": "web_search_20250305",
                     "name": "web_search",
-                    "max_uses": 5
+                    "max_uses": max_searches
                 }],
                 messages=[{
                     "role": "user",
@@ -143,7 +153,7 @@ class ClaudeSearchProvider:
 Focus on finding programs posted in the last {recency_days} days that explicitly target first-year and second-year students.
 
 Search query to use: {search_query}
-
+{companies_instruction}
 After searching, provide the results as a JSON array of postings with: company, title, url, location, posted_at, underclass_evidence, function_family, description.
 
 Return ONLY the JSON array."""

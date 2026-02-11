@@ -31,6 +31,7 @@ from app.sources.grok_search import GrokSearchProvider
 from app.sources.accelerators import AcceleratorScraper
 from app.storage.state import StateStore
 import requests
+import time
 
 
 def parse_args() -> argparse.Namespace:
@@ -173,6 +174,7 @@ def fetch_from_llm_search(
     """Fetch postings using LLM-powered search (Claude and/or OpenAI).
 
     Uses both providers if available and deduplicates results.
+    Also searches specifically for target companies in batches.
     """
     all_postings = []
     seen_urls = set()
@@ -186,6 +188,27 @@ def fetch_from_llm_search(
     # Get underclass terms from profile or config
     underclass_terms = profile.get_underclass_terms() if profile else config.keywords.underclass
 
+    def _add_postings(postings: list[Posting]) -> int:
+        """Add postings to results, deduplicating by URL. Returns count of new postings."""
+        added = 0
+        for posting in postings:
+            if posting.url not in seen_urls:
+                seen_urls.add(posting.url)
+                all_postings.append(posting)
+                added += 1
+        return added
+
+    # Batch target companies into groups of 100 for targeted searches
+    target_companies = config.search.target_companies
+    max_batches = config.search.max_company_batches
+    company_batches = [
+        target_companies[i:i + 100]
+        for i in range(0, len(target_companies), 100)
+    ][:max_batches]
+
+    if company_batches:
+        logger.info(f"Will search {len(target_companies)} target companies in {len(company_batches)} batches")
+
     # Claude search
     if env.anthropic_api_key:
         logger.info("Searching with Claude...")
@@ -194,16 +217,35 @@ def fetch_from_llm_search(
                 api_key=env.anthropic_api_key,
                 max_results=config.search.max_results_per_query
             )
+            # Broad search
             claude_results = claude_search.search(
                 target_functions=target_functions,
                 underclass_terms=underclass_terms,
                 recency_days=config.search.recency_days
             )
-            for posting in claude_results:
-                if posting.url not in seen_urls:
-                    seen_urls.add(posting.url)
-                    all_postings.append(posting)
-            logger.info(f"Claude found {len(claude_results)} postings ({claude_search.get_usage_stats()})")
+            added = _add_postings(claude_results)
+            logger.info(f"Claude broad search: {len(claude_results)} postings ({added} new)")
+
+            # Targeted company batch searches (with rate limit delays)
+            for i, batch in enumerate(company_batches):
+                logger.info(f"Claude batch {i+1}/{len(company_batches)}: waiting 65s for rate limit...")
+                time.sleep(65)
+                try:
+                    batch_results = claude_search.search(
+                        target_functions=target_functions,
+                        underclass_terms=underclass_terms,
+                        companies=batch,
+                        recency_days=config.search.recency_days
+                    )
+                    added = _add_postings(batch_results)
+                    if added > 0:
+                        logger.info(f"Claude batch {i+1}/{len(company_batches)}: {added} new from {', '.join(batch[:3])}...")
+                    else:
+                        logger.info(f"Claude batch {i+1}/{len(company_batches)}: 0 new postings")
+                except Exception as e:
+                    logger.warning(f"Claude batch {i+1} failed: {e}")
+
+            logger.info(f"Claude total: {claude_search.get_usage_stats()}")
         except Exception as e:
             logger.warning(f"Claude search failed: {e}")
 
@@ -216,18 +258,29 @@ def fetch_from_llm_search(
                 api_key=env.openai_api_key,
                 max_results=config.search.max_results_per_query
             )
+            # Broad search
             openai_results = openai_search.search(
                 target_functions=target_functions,
                 underclass_terms=underclass_terms,
                 recency_days=config.search.recency_days
             )
-            new_from_openai = 0
-            for posting in openai_results:
-                if posting.url not in seen_urls:
-                    seen_urls.add(posting.url)
-                    all_postings.append(posting)
-                    new_from_openai += 1
-            logger.info(f"OpenAI found {len(openai_results)} postings ({new_from_openai} new after dedup)")
+            added = _add_postings(openai_results)
+            logger.info(f"OpenAI broad search: {len(openai_results)} postings ({added} new)")
+
+            # Targeted company batch searches
+            for i, batch in enumerate(company_batches):
+                try:
+                    batch_results = openai_search.search(
+                        target_functions=target_functions,
+                        underclass_terms=underclass_terms,
+                        companies=batch,
+                        recency_days=config.search.recency_days
+                    )
+                    added = _add_postings(batch_results)
+                    if added > 0:
+                        logger.info(f"OpenAI batch {i+1}/{len(company_batches)}: {added} new from {', '.join(batch[:3])}...")
+                except Exception as e:
+                    logger.warning(f"OpenAI batch {i+1} failed: {e}")
         except ImportError:
             logger.warning("OpenAI package not installed, skipping OpenAI search")
         except Exception as e:
@@ -241,18 +294,29 @@ def fetch_from_llm_search(
                 api_key=env.xai_api_key,
                 max_results=config.search.max_results_per_query
             )
+            # Broad search
             grok_results = grok_search.search(
                 target_functions=target_functions,
                 underclass_terms=underclass_terms,
                 recency_days=config.search.recency_days
             )
-            new_from_grok = 0
-            for posting in grok_results:
-                if posting.url not in seen_urls:
-                    seen_urls.add(posting.url)
-                    all_postings.append(posting)
-                    new_from_grok += 1
-            logger.info(f"Grok found {len(grok_results)} postings ({new_from_grok} new after dedup)")
+            added = _add_postings(grok_results)
+            logger.info(f"Grok broad search: {len(grok_results)} postings ({added} new)")
+
+            # Targeted company batch searches
+            for i, batch in enumerate(company_batches):
+                try:
+                    batch_results = grok_search.search(
+                        target_functions=target_functions,
+                        underclass_terms=underclass_terms,
+                        companies=batch,
+                        recency_days=config.search.recency_days
+                    )
+                    added = _add_postings(batch_results)
+                    if added > 0:
+                        logger.info(f"Grok batch {i+1}/{len(company_batches)}: {added} new from {', '.join(batch[:3])}...")
+                except Exception as e:
+                    logger.warning(f"Grok batch {i+1} failed: {e}")
         except Exception as e:
             logger.warning(f"Grok search failed: {e}")
 

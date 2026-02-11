@@ -14,7 +14,9 @@ class SearchConfig(BaseModel):
     provider: str = Field(default="claude", pattern="^(claude|google_cse|bing|serpapi)$")
     recency_days: int = Field(default=7, ge=1, le=30)
     queries: list[str] = Field(default_factory=list)
+    target_companies: list[str] = Field(default_factory=list, description="Companies to specifically search for internships at via LLM search")
     max_results_per_query: int = Field(default=50, ge=1, le=100)
+    max_company_batches: int = Field(default=10, ge=1, le=50, description="Max batches of target companies to search per LLM provider")
     require_post_date: bool = Field(default=False, description="Require postings to have a date (LLM search results often lack dates)")
     require_underclass_terms: bool = Field(default=False, description="Require explicit underclass terms (freshman/sophomore). If false, includes any internship not explicitly for upperclassmen.")
 

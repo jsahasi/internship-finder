@@ -170,6 +170,30 @@ This document captures lessons learned while developing and maintaining the inte
 - Even without underclass programs now, these companies may add them seasonally
 - The infrastructure is in place to catch them when they do
 
+## Target Company Search
+
+### Batch Company Searches Need Rate Limit Delays
+- Sending 100 companies per prompt to Claude uses ~80K+ tokens
+- The 30K tokens/minute rate limit on lower tiers will block batch searches without delays
+- A 65-second delay between batch API calls keeps within the per-minute budget
+- The broad search (no companies) should run first with no delay
+- Batch searches run after with delays between each
+
+### ATS Slugs Must Be Verified
+- Many guessed ATS slugs return 404 (e.g., `notion`, `doordash`, `rivian`, `netflix` on Greenhouse)
+- Companies change ATS platforms or use custom slugs (e.g., Netflix uses their own careers site)
+- Two Sigma, Citadel, DE Shaw, Bridgewater don't use Greenhouse despite being finance firms
+- Ashby boards for OpenAI, Anthropic, Ramp, Vanta all returned no data — they may have switched platforms
+- Always verify slugs before adding; remove 404s promptly to avoid wasted API calls
+- Verified working Greenhouse boards (Feb 2026): stripe, coinbase, robinhood, brex, figma, scaleai, andurilindustries, a16z, spacex, databricks, point72, janestreet, instacart, reddit, dropbox, gusto, faire, airbnb, pinterest, twitch, fivetran, flexport, samsara, checkr
+
+### LLM Search Providers Have Different Strengths
+- Claude with web search found Palantir internship via Lever
+- Grok found Jane Street Early Insight Program
+- OpenAI (GPT-4o) returned 0 results — lacks real web search in API mode
+- The `target_companies` list in config.yaml (278 companies) is passed to LLM search prompts in batches of 100
+- Companies are organized by category: Dow 30, Fortune 500, Nasdaq 100, VCs, IBs, hedge funds, PE firms, YC/accelerator companies
+
 ## Code Quality
 
 ### Avoid Over-Engineering

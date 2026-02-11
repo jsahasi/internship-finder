@@ -88,17 +88,21 @@ class OpenAISearchProvider:
         terms_str = " OR ".join(underclass_terms[:5])
 
         if companies:
-            query = f"({terms_str}) internship ({functions_str}) at {', '.join(companies[:5])}"
+            query_companies = ", ".join(companies[:10])
+            query = f"({terms_str}) internship ({functions_str}) at {query_companies}"
+            companies_list = "\n".join(f"- {c}" for c in companies)
+            companies_addendum = f"\n\nPRIORITY COMPANIES TO CHECK:\n{companies_list}\n\nSearch for internship programs at ALL of these companies."
         else:
             query = f"({terms_str}) internship 2026 ({functions_str}) site:greenhouse.io OR site:lever.co"
+            companies_addendum = ""
 
-        logger.info(f"OpenAI searching: {query[:80]}...")
+        logger.info(f"OpenAI searching: {query[:80]}... ({len(companies) if companies else 0} target companies)")
 
         prompt = SEARCH_PROMPT.format(
             functions=functions_str,
             days=recency_days,
             query=query
-        )
+        ) + companies_addendum
 
         try:
             # Use GPT-4 with web browsing if available

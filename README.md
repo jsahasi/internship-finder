@@ -5,6 +5,8 @@ A production-grade Python application that finds internship opportunities specif
 ## Features
 
 - **Triple-LLM Search**: Uses Claude, OpenAI, and Grok (X.AI) for maximum coverage
+- **278 Target Companies**: Searches Dow 30, Fortune 500, Nasdaq 100, top VCs, IBs, hedge funds, PE firms, and YC/accelerator companies
+- **Batch Company Search**: LLM providers search target companies in batches of 100 with rate limit handling
 - **Accelerator Discovery**: Auto-discovers job boards from YC portfolio (5,600+ companies)
 - **Smart Filtering**: Excludes postings for juniors/seniors, MS/PhD based on your profile
 - **URL Validation**: Verifies positions are still open before including them
@@ -134,12 +136,18 @@ recipients:
 search:
   provider: claude               # claude, google_cse, bing, serpapi
   recency_days: 7
+  max_company_batches: 10        # Max batches of target companies per LLM provider
+  target_companies:              # Companies to search via LLM (batched in groups of 100)
+    - Google
+    - Meta
+    - Goldman Sachs
+    # ... supports hundreds of companies
 
 targets:
   ats_companies:
-    greenhouse: [google, stripe, airbnb]
-    lever: [netflix]
-    ashby: [openai]
+    greenhouse: [stripe, spacex, airbnb]
+    lever: [plaid]
+    ashby: []
 
 # Custom function families (add your own!)
 functions:
@@ -168,10 +176,14 @@ Contains lessons learned during development to prevent repeating mistakes. Updat
 
 1. **Profile Loading**: Reads your preferences from `config/seeking.txt`
 2. **Resume Extraction**: Extracts text from your PDF resume
-3. **Smart Search**: Uses Claude (and OpenAI if available) to find relevant postings
-4. **Filtering**: Applies rules based on your year and preferences
-5. **Document Generation**: Creates tailored resume and cover letter for each match
-6. **Email Delivery**: Sends digest with PDF attachments
+3. **ATS Fetch**: Pulls all jobs from configured Greenhouse, Lever, Ashby boards
+4. **LLM Search**: Broad search + targeted batch searches across 278 target companies (with rate limit delays)
+5. **Deduplication**: Filters out previously seen/emailed postings via SQLite
+6. **Filtering**: Applies rules based on year, upperclass terms, internship detection, function family
+7. **URL Validation**: Verifies positions are still open (checks for redirects, closed indicators)
+8. **LLM Classification**: Enriches matches with why-it-fits explanations
+9. **Document Generation**: Creates tailored resume and cover letter for each match
+10. **Email Delivery**: Sends HTML digest with CSV and PDF attachments
 
 ## Triple-LLM Search
 
