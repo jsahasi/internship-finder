@@ -106,7 +106,7 @@ class PostingFilter:
         season_pattern = re.compile(r'\b(?:summer|fall|spring|winter)\s+', re.IGNORECASE)
         for year_match in self.year_pattern.finditer(text):
             # Check if this year is preceded by a season word
-            prefix_start = max(0, year_match.start() - 10)
+            prefix_start = max(0, year_match.start() - 30)
             prefix = text[prefix_start:year_match.start()]
             if season_pattern.search(prefix):
                 continue  # "Summer 2026" etc. — skip
