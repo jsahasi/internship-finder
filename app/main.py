@@ -369,7 +369,7 @@ def fetch_from_traditional_search(
     if not queries:
         queries = [build_internship_query(
             config.keywords.underclass[:5],
-            config.keywords.role_terms[:5]
+            config.keywords.role_terms[:6]
         )]
 
     generic_parser = GenericHTMLParser()
