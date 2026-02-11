@@ -102,8 +102,14 @@ class PostingFilter:
         title_has_underclass = self.underclass_pattern.search(title_lower) is not None
 
         # Rule 1: Check for excluded graduation years
-        year_match = self.year_pattern.search(text)
-        if year_match:
+        # Skip matches preceded by season words (e.g., "Summer 2026" is an internship season, not a grad year)
+        season_pattern = re.compile(r'\b(?:summer|fall|spring|winter)\s+', re.IGNORECASE)
+        for year_match in self.year_pattern.finditer(text):
+            # Check if this year is preceded by a season word
+            prefix_start = max(0, year_match.start() - 10)
+            prefix = text[prefix_start:year_match.start()]
+            if season_pattern.search(prefix):
+                continue  # "Summer 2026" etc. — skip
             self.stats.excluded_year += 1
             return FilterResult(
                 included=False,

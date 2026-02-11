@@ -30,6 +30,7 @@ from app.sources.search_provider import (
 )
 from app.sources.grok_search import GrokSearchProvider
 from app.sources.accelerators import AcceleratorScraper
+from app.sources.linkedin_search import search_linkedin, extract_companies
 from app.storage.state import StateStore
 import requests
 import time
@@ -716,6 +717,25 @@ def run_pipeline(
         for posting in traditional_postings:
             if posting.url not in existing_urls:
                 all_postings.append(posting)
+
+    # Fetch from LinkedIn search
+    try:
+        logger.info("Searching LinkedIn...")
+        linkedin_postings = search_linkedin("summer 2026 internship")
+        existing_urls = {p.url for p in all_postings}
+        linkedin_new = [p for p in linkedin_postings if p.url not in existing_urls]
+        all_postings.extend(linkedin_new)
+        logger.info(f"LinkedIn: {len(linkedin_postings)} found, {len(linkedin_new)} new")
+
+        # Extract new companies and add to target_companies for future LLM searches
+        linkedin_companies = extract_companies(linkedin_postings)
+        existing_companies = {c.lower() for c in config.search.target_companies}
+        new_companies = [c for c in linkedin_companies if c.lower() not in existing_companies]
+        if new_companies:
+            config.search.target_companies.extend(new_companies)
+            logger.info(f"LinkedIn: discovered {len(new_companies)} new companies: {', '.join(new_companies[:10])}")
+    except Exception as e:
+        logger.warning(f"LinkedIn search failed: {e}")
 
     logger.info(f"Total postings fetched: {len(all_postings)}")
 

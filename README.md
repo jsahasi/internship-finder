@@ -13,7 +13,7 @@ A production-grade Python application that finds internship opportunities specif
 - **Personalized Profile**: Configure your year, target roles, skills, and preferences
 - **Auto-Generated Documents**: Creates tailored resumes (PDF) and cover letters (TXT)
 - **Anti-Fabrication**: Strict rules prevent LLMs from exaggerating or inventing content
-- **Multi-Source Discovery**: Fetches from Greenhouse, Lever, Ashby ATS platforms
+- **Multi-Source Discovery**: Fetches from Greenhouse, Lever, Ashby, and Workday ATS platforms
 - **Email Digest**: Sends results with attachments (only when matches found)
 - **Deduplication**: SQLite-based state prevents duplicate emails
 - **Source Tracking**: "Sourced By" column shows which LLM found each posting
@@ -148,6 +148,10 @@ targets:
     greenhouse: [stripe, spacex, airbnb]
     lever: [plaid]
     ashby: []
+    workday:
+      - tenant: nvidia
+        instance: wd5
+        portal: NVIDIAExternalCareerSite
 
 # Custom function families (add your own!)
 functions:
@@ -176,8 +180,8 @@ Contains lessons learned during development to prevent repeating mistakes. Updat
 
 1. **Profile Loading**: Reads your preferences from `config/seeking.txt`
 2. **Resume Extraction**: Extracts text from your PDF resume
-3. **ATS Fetch**: Pulls all jobs from configured Greenhouse, Lever, Ashby boards
-4. **LLM Search**: Broad search + targeted batch searches across 278 target companies (with rate limit delays)
+3. **ATS Fetch**: Pulls all jobs from configured Greenhouse, Lever, Ashby, and Workday boards (21 Workday companies including NVIDIA, Disney, Salesforce, Netflix, Morgan Stanley, Boeing, etc.)
+4. **LLM Search**: Broad search + targeted batch searches across target companies (with rate limit delays)
 5. **Deduplication**: Filters out previously seen/emailed postings via SQLite
 6. **Filtering**: Applies rules based on year, upperclass terms, internship detection, function family
 7. **URL Validation**: Verifies positions are still open (checks for redirects, closed indicators)
@@ -219,6 +223,24 @@ The discovery process:
 4. Run periodically to discover new companies
 
 Found companies include: Stripe, Airbnb, Gusto, Amplitude, HackerRank, and many more.
+
+## Summer 2026 Prioritization
+
+Postings with "Summer 2026" in the title are automatically sorted to the top of results, followed by remaining postings sorted by recency. This ensures the most relevant seasonal internships are seen first.
+
+## Scheduling (Windows)
+
+The scanner can run daily via Windows Task Scheduler:
+
+```powershell
+# Register a daily 8am task
+Register-ScheduledTask -TaskName "InternshipScanner" `
+  -Trigger (New-ScheduledTaskTrigger -Daily -At 8am) `
+  -Action (New-ScheduledTaskAction -Execute "C:\Users\jayesh.sahasi\internship-finder\run_scanner.bat") `
+  -Settings (New-ScheduledTaskSettingsSet -StartWhenAvailable)
+```
+
+The batch file (`run_scanner.bat`) runs the scanner without `--force` to avoid duplicate emails.
 
 ## CLI Options
 
@@ -262,7 +284,8 @@ internship-finder/
 │   │   ├── accelerators.py      # YC portfolio scraper
 │   │   ├── greenhouse.py        # Greenhouse ATS
 │   │   ├── lever.py             # Lever ATS
-│   │   └── ashby.py             # Ashby ATS
+│   │   ├── ashby.py             # Ashby ATS
+│   │   └── workday.py           # Workday ATS (21 companies)
 │   ├── filtering/               # Filtering engine
 │   ├── llm/                     # LLM classification
 │   ├── storage/                 # SQLite deduplication
