@@ -23,13 +23,19 @@ This document captures lessons learned while developing and maintaining the inte
 
 ## URL and Position Validation
 
-### Always Validate Positions Are Still Open
+### Always Validate Positions Are Still Open (Conservative)
 - Job postings can be taken down at any time
 - Before including a position in the email, validate it's still active by:
-  1. Checking the URL returns 200 (not 404)
-  2. Looking for "position closed" indicators in the page content
-  3. Verifying presence of an apply button/link
+  1. Checking the URL returns HTTP 200 (any non-200 = reject)
+  2. Looking for "position closed" / "expired" indicators in the page content
+  3. Verifying presence of an apply button/link (no apply button = reject)
+  4. Platform-specific checks: Workday `postingAvailable: false`, LinkedIn auth walls
+- **Conservative defaults**: if we can't confirm a posting is open, exclude it
+  - Page unreachable → reject (was: assume open)
+  - No apply button found → reject (was: assume open)
+  - Non-200 HTTP status → reject (was: assume open for non-404)
 - Better to skip a valid position than include a closed one
+- Log all removals at INFO level so they're visible in scan output
 
 ### LLMs Fabricate URLs
 - LLM search providers (Claude, OpenAI, Grok) often return fabricated/hallucinated URLs

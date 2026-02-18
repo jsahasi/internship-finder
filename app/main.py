@@ -434,21 +434,20 @@ def fetch_from_traditional_search(
 
 
 def validate_posting_still_open(posting: Posting, logger) -> bool:
-    """Check if a job posting is still open by verifying it's a real job page.
+    """Check if a job posting is still open by verifying the Apply link works.
 
-    Validates:
-    1. URL doesn't redirect to a generic careers page
-    2. Page doesn't show "position closed" indicators
-    3. Page contains job-specific content
+    Conservative approach: only include if we can confirm the position is open.
+    Better to skip a valid position than email a closed one.
 
     Args:
         posting: The posting to validate.
         logger: Logger instance.
 
     Returns:
-        True if posting appears to still be open, False otherwise.
+        True if posting is confirmed still open, False otherwise.
     """
     from urllib.parse import urlparse
+    import re
 
     try:
         headers = {
@@ -456,14 +455,10 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
         }
         response = requests.get(posting.url, headers=headers, timeout=10, allow_redirects=True)
 
-        if response.status_code == 404:
-            logger.debug(f"Position closed (404): {posting.company} - {posting.title}")
-            return False
-
+        # Any non-200 status means position is likely gone
         if response.status_code != 200:
-            # If we can't verify, assume it's open
-            logger.debug(f"Could not verify posting status ({response.status_code}): {posting.url}")
-            return True
+            logger.info(f"Removed (HTTP {response.status_code}): {posting.company} - {posting.title}")
+            return False
 
         # Check for redirect to generic careers page
         original_url = urlparse(posting.url)
@@ -471,41 +466,43 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
 
         # Detect if redirected to a different host (likely generic careers site)
         if original_url.netloc != final_url.netloc:
-            # Check if final URL is a generic page (no job ID in path)
             generic_path_patterns = [
-                '/positions',
-                '/positions/',
-                '/careers',
-                '/careers/',
-                '/jobs',
-                '/jobs/',
-                '/open-positions',
-                '/opportunities',
+                '/positions', '/careers', '/jobs', '/open-positions',
+                '/opportunities', '/search',
             ]
             final_path_lower = final_url.path.lower().rstrip('/')
 
-            # If redirected to root or generic listing page, it's invalid
-            if final_path_lower in ['', '/'] or any(final_path_lower == p.rstrip('/') for p in generic_path_patterns):
-                logger.debug(f"Invalid URL (redirected to generic page {response.url}): {posting.company} - {posting.title}")
+            if final_path_lower in ['', '/'] or any(final_path_lower == p for p in generic_path_patterns):
+                logger.info(f"Removed (redirected to generic page): {posting.company} - {posting.title}")
                 return False
 
-        # Even same host - check if path lost the job ID
+        # Check if path lost the job ID after redirect
         original_path = original_url.path.lower()
         final_path = final_url.path.lower()
 
-        # If original had a job ID pattern but final doesn't, it's likely invalid
-        import re
         job_id_pattern = r'/jobs?/\d+|/positions?/[a-f0-9-]+|/job/[a-z0-9-]+|/\d{5,}'
         had_job_id = re.search(job_id_pattern, original_path)
         has_job_id = re.search(job_id_pattern, final_path)
 
         if had_job_id and not has_job_id:
-            logger.debug(f"Invalid URL (job ID lost after redirect): {posting.company} - {posting.title}")
+            logger.info(f"Removed (job ID lost in redirect): {posting.company} - {posting.title}")
             return False
 
         content = response.text.lower()
 
-        # Check for common "position closed" indicators
+        # Workday-specific: check postingAvailable flag
+        if 'myworkdayjobs.com' in posting.url:
+            if 'postingavailable: false' in content or '"postingavailable":false' in content:
+                logger.info(f"Removed (Workday posting unavailable): {posting.company} - {posting.title}")
+                return False
+
+        # LinkedIn-specific: check for auth wall or expired signals
+        if 'linkedin.com' in posting.url:
+            if 'authwall' in response.url:
+                logger.info(f"Removed (LinkedIn auth wall): {posting.company} - {posting.title}")
+                return False
+
+        # Check for "position closed" indicators
         closed_indicators = [
             'this position has been filled',
             'this job is no longer available',
@@ -516,11 +513,18 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
             'job has been removed',
             'position has been closed',
             'no longer open',
+            'this role has been filled',
+            'this position is no longer available',
+            'this job has expired',
+            'this requisition is no longer active',
+            'the position you are looking for is no longer open',
+            'sorry, this position has been filled',
+            'this job posting is no longer available',
         ]
 
         for indicator in closed_indicators:
             if indicator in content:
-                logger.debug(f"Position closed (indicator found): {posting.company} - {posting.title}")
+                logger.info(f"Removed (closed indicator: '{indicator}'): {posting.company} - {posting.title}")
                 return False
 
         # Check for generic listing pages (many jobs listed, not a single job)
@@ -538,7 +542,7 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
 
         listing_indicator_count = sum(1 for ind in listing_page_indicators if ind in content)
         if listing_indicator_count >= 2:
-            logger.debug(f"Invalid URL (appears to be job listing page): {posting.company} - {posting.title}")
+            logger.info(f"Removed (generic listing page): {posting.company} - {posting.title}")
             return False
 
         # Check for presence of apply button/link
@@ -552,20 +556,37 @@ def validate_posting_still_open(posting: Posting, logger) -> bool:
             'id="apply',
             'apply-button',
             'btn-apply',
+            'apply for role',
+            'apply to job',
+            'start application',
+            'submit your application',
+            'apply on company',
+            'apply on website',
+            'easy apply',
+            # Greenhouse
+            '#app_apply',
+            'application-apply',
+            # Lever
+            'lever-application',
+            'postings-btn-apply',
+            # Workday
+            'postingavailable: true',
+            '"postingavailable":true',
+            # Ashby
+            'ashby-job-posting',
         ]
 
         has_apply = any(indicator in content for indicator in apply_indicators)
         if not has_apply:
-            # Some ATS pages may not have obvious apply buttons, so don't reject
-            logger.debug(f"No apply button found, assuming open: {posting.company} - {posting.title}")
-            return True
+            logger.info(f"Removed (no apply button found): {posting.company} - {posting.title}")
+            return False
 
         return True
 
     except requests.RequestException as e:
-        # If we can't reach the page, assume it's still open
-        logger.debug(f"Could not reach posting URL: {posting.url} - {e}")
-        return True
+        # Can't reach the page — don't include an unverifiable posting
+        logger.info(f"Removed (unreachable: {e}): {posting.company} - {posting.title}")
+        return False
 
 
 def validate_postings_batch(postings: list[Posting], logger) -> list[Posting]:

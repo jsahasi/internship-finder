@@ -9,7 +9,7 @@ A production-grade Python application that finds internship opportunities specif
 - **Batch Company Search**: LLM providers search target companies in batches of 100 with rate limit handling
 - **Accelerator Discovery**: Auto-discovers job boards from YC portfolio (5,600+ companies)
 - **Smart Filtering**: Excludes postings for juniors/seniors, MS/PhD based on your profile
-- **URL Validation**: Verifies positions are still open before including them
+- **Strict URL Validation**: Confirms Apply link works before including any posting (rejects expired, closed, or unreachable)
 - **Personalized Profile**: Configure your year, target roles, skills, and preferences
 - **Auto-Generated Documents**: Creates tailored resumes (PDF) and cover letters (TXT)
 - **Anti-Fabrication**: Strict rules prevent LLMs from exaggerating or inventing content
@@ -184,7 +184,7 @@ Contains lessons learned during development to prevent repeating mistakes. Updat
 4. **LLM Search**: Broad search + targeted batch searches across target companies (with rate limit delays)
 5. **Deduplication**: Filters out previously seen/emailed postings via SQLite
 6. **Filtering**: Applies rules based on year, upperclass terms, internship detection, function family
-7. **URL Validation**: Verifies positions are still open (checks for redirects, closed indicators)
+7. **URL Validation**: Confirms each Apply link works — checks HTTP status, redirects, closed/expired indicators, and verifies an apply button exists (platform-aware for Workday, LinkedIn, Greenhouse, Lever)
 8. **LLM Classification**: Enriches matches with why-it-fits explanations
 9. **Document Generation**: Creates tailored resume and cover letter for each match
 10. **Email Delivery**: Sends HTML digest with CSV and PDF attachments
