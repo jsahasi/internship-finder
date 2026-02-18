@@ -72,7 +72,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         '--no_documents',
         action='store_true',
-        help='Skip generating tailored resumes and cover letters'
+        help='Skip generating tailored resumes and cover letters (default behavior)'
+    )
+    parser.add_argument(
+        '--with_documents',
+        action='store_true',
+        help='Generate tailored resumes and cover letters for each match'
     )
     parser.add_argument(
         '--run_once',
@@ -1019,7 +1024,7 @@ def main() -> int:
             dry_run=args.dry_run,
             force=args.force,
             max_results=args.max_results,
-            generate_docs=not args.no_documents,
+            generate_docs=args.with_documents,
             accelerator_boards=accelerator_boards
         )
     except KeyboardInterrupt:

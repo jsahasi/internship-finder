@@ -94,11 +94,11 @@ SMTP_PASSWORD=app_password      # Use Gmail App Password
 # Dry run (see results without sending email)
 python -m app.main --dry_run
 
-# Full run with email and document generation
+# Full run with email
 python -m app.main
 
-# Skip document generation (faster)
-python -m app.main --no_documents
+# Include tailored resumes and cover letters (opt-in)
+python -m app.main --with_documents
 ```
 
 ## Configuration Files
@@ -249,7 +249,8 @@ The batch file (`run_scanner.bat`) runs the scanner without `--force` to avoid d
 | `--config PATH` | Path to config YAML (default: config.yaml) |
 | `--profile_dir PATH` | Directory with seeking.txt and resume (default: config) |
 | `--dry_run` | Print results without sending email |
-| `--no_documents` | Skip generating tailored resumes/cover letters |
+| `--with_documents` | Generate tailored resumes/cover letters (off by default) |
+| `--no_documents` | Explicitly skip documents (same as default, for clarity) |
 | `--force` | Ignore deduplication, reprocess all |
 | `--max_results N` | Limit postings to process |
 | `--log_level LEVEL` | DEBUG, INFO, WARNING, ERROR |
